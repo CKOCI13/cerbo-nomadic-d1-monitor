@@ -37,7 +37,9 @@ class ScanTest(unittest.TestCase):
                 if scenario.get(self.name) == 'ok':
                     return nc.ID_ELECTRIC, bytes(8)
                 if scenario.get(self.name) == 'wrong-speed':
-                    self.errors += 1
+                    # A D1 at the other bitrate causes hundreds of bus errors a second. Add enough
+                    # per call that even one call clears the threshold, however slow the machine.
+                    self.errors += 25
                     write(self.name, 'statistics/rx_errors', str(self.errors))
                 return None
 
