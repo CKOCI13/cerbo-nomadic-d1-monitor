@@ -820,7 +820,7 @@ def run_scan(configured, seconds=3.0):
     if version:
         ok = version[:2] >= (3, 80)
         print('Venus OS %s %s' % (version[2], 'OK' if ok else
-              '- the GX screen and VRM need v3.80 or newer (Settings > Firmware)'))
+              '- the GX screen and VRM need v3.80 or newer (Settings > General > Firmware)'))
     net = SYS_NET
     names = []
     for name in sorted(os.listdir(net)):

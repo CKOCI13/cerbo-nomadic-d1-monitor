@@ -58,8 +58,8 @@ If `--scan` reports bus errors but no frames, the D1 is at the other speed: swit
 
 1. Go to **Settings → General → Access & Security → Access level** and choose **User & Installer**
    (password `ZZZ`).
-2. Still on the Access & Security page, pull the list down and hold it for 5 seconds. The access level
-   changes to **Superuser**.
+2. Still on the Access & Security page, pull the list down and hold it for 5 seconds (on Remote Console with a
+   keyboard: hold the right-arrow key). The access level changes to **Superuser**.
 3. Set a **Root password** (8 characters or more) and switch on **Enable SSH on LAN**.
 
 ## 4. Copy the files
@@ -116,11 +116,11 @@ After you edit `config.ini`, restart the monitor with `svc -t /service/dbus-noma
 
 ### GX screen, Remote Console and VRM
 
-This needs **Venus OS v3.80 or newer** on the GX (check under Settings → Firmware). The monitor publishes its
+This needs **Venus OS v3.80 or newer** on the GX (check under Settings → General → Firmware). The monitor publishes its
 readings through Victron's standard switch API, so they appear wherever Victron shows switches:
 
 * **GX touchscreen and Remote Console** (including the Console tab in VRM): open the **switch pane**.
-* **Device List → DC-DC D1**: the device page lists every item and lets you rename it, move it to another card,
+* **Settings → Devices → DC-DC D1**: the device page lists every item and lets you rename it, move it to another card,
   or hide it. Your changes are kept in `ui.json`.
 * **VRM portal**: the **Switches** panel on the dashboard.
 * **VRM app** (Android/iOS): the **Switches** widget.
