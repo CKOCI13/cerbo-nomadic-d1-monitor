@@ -1,0 +1,36 @@
+# Files that must never be uploaded to GitHub.
+
+# Nomadic's documents (the D1 manual and the CAN interface note) are their copyrighted
+# material. Ask Nomadic for them; see README.md.
+*NTL_DCtoDC*.pdf
+D1_Bidirectional_DCDC_Converter_Manual*.pdf
+
+# Personal screenshots dropped into the project folder (pictures used by the docs live in docs/images)
+/*.png
+/*.jpg
+/*.jpeg
+
+# Created by "Cerbo Setup.bat": your Cerbo's IP address
+cerbo-ip.txt
+
+# Created by the monitor while it runs (your screen layout); state*.json is left over from version 1
+state.json
+state-sim.json
+ui.json
+ui-sim.json
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Only needed to rebuild the docs (docs/src/build.cjs)
+node_modules/
+package-lock.json

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Figures</title>
+<!-- Every element with a data-figure attribute is rendered to docs/images/<name>.png by build.cjs. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@800;900&family=Roboto:wght@400;500&display=swap">
+<style>
+  :root {
+    --ink: #111827; --muted: #4b5563; --soft: #6b7280; --line: #d6dce6;
+    --hv: #2f6db3; --lv: #d98a1e; --d1: #3a4552; --gx: #0e131a; --good: #24834b; --bad: #c9403a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #888; font-family: Inter, "Liberation Sans", sans-serif; color: var(--ink); }
+  [data-figure] { background: #fff; position: relative; overflow: hidden; margin: 20px; }
+  .round { font-family: Nunito, Inter, sans-serif; font-weight: 900; }
+
+  /* ---------------------------------------------------------------- Victron screens (gui-v2 look) */
+  .gx { font-family: Roboto, Inter, sans-serif; color: #fff; }
+  .bezel { position: absolute; inset: 0; background: #262626; border-radius: 24px; }
+  .screen { position: absolute; inset: 30px 34px; background: #000; overflow: hidden; }
+  .topbar { height: 50px; display: flex; align-items: center; justify-content: center; position: relative; font-size: 15px; }
+  .topbar .time { position: absolute; right: 16px; color: #9b9b9b; }
+  .topbar .icons { position: absolute; left: 16px; display: flex; gap: 18px; align-items: center; }
+  .ico-sw { width: 26px; height: 24px; display: grid; gap: 4px; }
+  .ico-sw i { border: 2px solid #9b9b9b; border-radius: 6px; position: relative; }
+  .ico-sw i::after { content: ""; position: absolute; left: 3px; top: 2px; width: 5px; height: 5px; border-radius: 50%; background: #9b9b9b; }
+  .ico-pane { width: 26px; height: 24px; display: grid; gap: 3px; }
+  .ico-pane i { background: #387dc5; border-radius: 3px; }
+  .cards { position: absolute; top: 56px; left: 18px; display: flex; gap: 16px; }
+  .card { background: #141414; border-radius: 8px; padding: 16px 18px 6px; width: 330px; }
+  .card-title { display: flex; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 18px; }
+  .dev { width: 10px; height: 16px; border: 2px solid #fff; border-radius: 3px; position: relative; }
+  .dev::after { content: ""; position: absolute; left: 1px; bottom: 1px; width: 4px; height: 4px; border-radius: 50%; border: 1px solid #fff; }
+  .item { margin-bottom: 18px; }
+  .item .name { font-size: 16px; margin-bottom: 8px; }
+  .tile { background: #1f1f1f; border-radius: 6px; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 21px; }
+  .tile .k { color: #8a8a8a; }
+  .tile.fault { box-shadow: inset 0 0 0 2px #e23b3b; }
+  .badge-hidden { color: #8a8a8a; font-size: 12px; }
+
+  /* ---------------------------------------------------------------- phone */
+  .phone { position: absolute; inset: 0; background: #111; border-radius: 40px; }
+  .phone .in { position: absolute; inset: 12px; background: #141414; border-radius: 30px; overflow: hidden; }
+  .appbar { background: #2a2a2a; padding: 22px 16px 0; }
+  .appbar .t { display: flex; gap: 26px; align-items: center; font-size: 19px; }
+  .tabs { display: flex; justify-content: space-around; margin-top: 18px; font-size: 14px; color: #d0d0d0; }
+  .tabs span { padding-bottom: 10px; }
+  .tabs .on { color: #fff; border-bottom: 3px solid #f08a24; }
+  .phone .cards { position: static; flex-direction: column; padding: 0 12px; gap: 10px; }
+  .phone .card { width: auto; }
+  .phone .item { margin-bottom: 12px; } .phone .tile { height: 44px; font-size: 18px; } .phone .card-title { margin-bottom: 12px; }
+
+  /* ---------------------------------------------------------------- explainer bits */
+  .box { position: absolute; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .d1 { background: var(--d1); color: #fff; }
+  .gxbox { background: var(--gx); color: #fff; }
+  .code { background: #fff; border: 3px solid var(--line); font-family: "DejaVu Sans Mono", monospace; font-size: 19px; white-space: nowrap; }
+  .tr { background: var(--hv); color: #fff; }
+  .label { position: absolute; font-size: 15px; font-weight: 700; letter-spacing: .03em; color: var(--muted); text-transform: uppercase; }
+  .arrow { position: absolute; height: 4px; background: #4b5563; }
+  .arrow::after { content: ""; position: absolute; right: -2px; top: -8px; width: 14px; height: 14px; border-right: 4px solid #4b5563; border-top: 4px solid #4b5563; transform: rotate(45deg); }
+  .step { position: absolute; bottom: 30px; width: 200px; border: 3px solid var(--good); background: #e8f4ec; border-radius: 14px; text-align: center; padding-top: 16px; }
+  .step .n { color: var(--good); font-size: 44px; line-height: 1; }
+  .step b { display: block; font-size: 18px; margin: 8px 8px 4px; }
+  .step span { display: block; color: var(--muted); font-size: 15px; padding: 0 10px; }
+  .bat { position: absolute; border-radius: 12px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+  .flowline { position: absolute; height: 0; border-top: 6px dotted; }
+</style>
+</head>
+<body>
+
+<!-- ======================================================================= Cerbo screen -->
+<div data-figure="cerbo-readings" class="gx" style="width:1140px;height:500px">
+  <div class="bezel"></div>
+  <div class="screen">
+    <div class="topbar">
+      <div class="icons"><div class="ico-sw"><i></i><i></i></div><div class="ico-pane"><i></i><i></i></div></div>
+      Switches<span class="time">10:42</span>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-title"><span class="dev"></span>DC-DC D1</div>
+        <div class="item"><div class="name">Alarm</div><div class="tile"><span class="k">State</span>None</div></div>
+        <div class="item"><div class="name">Status</div><div class="tile"><span class="k">State</span>Autonomous</div></div>
+        <div class="item"><div class="name">Temperature</div><div class="tile"><span class="k">Temperature</span>35 °C</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dev"></span>DC-DC D1 12 V side</div>
+        <div class="item"><div class="name">Current</div><div class="tile"><span class="k">Value</span>22 A</div></div>
+        <div class="item"><div class="name">Power</div><div class="tile"><span class="k">Value</span>295 W</div></div>
+        <div class="item"><div class="name">Voltage</div><div class="tile"><span class="k">Value</span>13.4 V</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dev"></span>DC-DC D1 48 V side</div>
+        <div class="item"><div class="name">Current</div><div class="tile"><span class="k">Value</span>-6 A</div></div>
+        <div class="item"><div class="name">Power</div><div class="tile"><span class="k">Value</span>-307 W</div></div>
+        <div class="item"><div class="name">Voltage</div><div class="tile"><span class="k">Value</span>51.2 V</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- The same screen with a fault, to show how alarms look -->
+<div data-figure="cerbo-alarm" class="gx" style="width:1140px;height:500px">
+  <div class="bezel"></div>
+  <div class="screen">
+    <div class="topbar">
+      <div class="icons"><div class="ico-sw"><i></i><i></i></div><div class="ico-pane"><i></i><i></i></div></div>
+      Switches<span class="time">10:47</span>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-title"><span class="dev"></span>DC-DC D1</div>
+        <div class="item"><div class="name">Alarm <span class="badge-hidden">· 2 active</span></div><div class="tile fault"><span class="k">State</span>Product overheating</div></div>
+        <div class="item"><div class="name">Status</div><div class="tile"><span class="k">State</span>Derating (hot)</div></div>
+        <div class="item"><div class="name">Temperature</div><div class="tile"><span class="k">Temperature</span>96 °C</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dev"></span>DC-DC D1 12 V side</div>
+        <div class="item"><div class="name">Current</div><div class="tile"><span class="k">Value</span>41 A</div></div>
+        <div class="item"><div class="name">Power</div><div class="tile"><span class="k">Value</span>541 W</div></div>
+        <div class="item"><div class="name">Voltage</div><div class="tile"><span class="k">Value</span>13.2 V</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dev"></span>DC-DC D1 48 V side</div>
+        <div class="item"><div class="name">Current</div><div class="tile"><span class="k">Value</span>-11 A</div></div>
+        <div class="item"><div class="name">Power</div><div class="tile"><span class="k">Value</span>-562 W</div></div>
+        <div class="item"><div class="name">Voltage</div><div class="tile"><span class="k">Value</span>51.1 V</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= VRM app -->
+<div data-figure="vrm-app" class="gx" style="width:390px;height:1180px;background:transparent">
+  <div class="phone"><div class="in">
+    <div class="appbar">
+      <div class="t"><span style="font-size:24px">←</span>My system</div>
+      <div class="tabs"><span class="on">System</span><span>Data</span><span>Devices</span></div>
+    </div>
+    <div style="padding:16px 18px 10px;font-size:16px">Switches</div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-title"><span class="dev"></span>DC-DC D1</div>
+        <div class="item"><div class="name">Alarm</div><div class="tile"><span class="k">State</span>None</div></div>
+        <div class="item"><div class="name">Status</div><div class="tile"><span class="k">State</span>Autonomous</div></div>
+        <div class="item"><div class="name">Temperature</div><div class="tile"><span class="k">Temperature</span>35 °C</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dev"></span>DC-DC D1 12 V side</div>
+        <div class="item"><div class="name">Current</div><div class="tile"><span class="k">Value</span>22 A</div></div>
+        <div class="item"><div class="name">Power</div><div class="tile"><span class="k">Value</span>295 W</div></div>
+        <div class="item"><div class="name">Voltage</div><div class="tile"><span class="k">Value</span>13.4 V</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dev"></span>DC-DC D1 48 V side</div>
+        <div class="item"><div class="name">Current</div><div class="tile"><span class="k">Value</span>-6 A</div></div>
+        <div class="item"><div class="name">Power</div><div class="tile"><span class="k">Value</span>-307 W</div></div>
+        <div class="item"><div class="name">Voltage</div><div class="tile"><span class="k">Value</span>51.2 V</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- ======================================================================= translator -->
+<div data-figure="explained-translator" style="width:1000px;height:400px">
+  <div class="label" style="left:30px;top:26px">The D1 tells the Cerbo things</div>
+  <div class="box d1 round" style="left:30px;top:60px;width:140px;height:88px;font-size:34px">D1</div>
+  <div class="box code" style="left:192px;top:70px;width:244px;height:68px">44 44 E0 07 D0 53 …</div>
+  <div class="arrow" style="left:446px;top:102px;width:46px"></div>
+  <div class="box tr" style="left:500px;top:64px;width:150px;height:80px"><span class="round" style="font-size:22px">translator</span><span style="font-size:14px;opacity:.9">(in the Cerbo)</span></div>
+  <div class="arrow" style="left:658px;top:102px;width:46px"></div>
+  <div class="box gxbox" style="left:712px;top:54px;width:258px;height:100px;align-items:flex-start;padding-left:20px;font-size:16px;line-height:1.6">
+    <div>12 V side 13.6 V 20 A</div><div>48 V side 51.2 V</div><div>Temperature 35 °C</div></div>
+
+  <div class="label" style="left:30px;top:206px">Nothing goes back</div>
+  <div class="box gxbox" style="left:30px;top:240px;width:140px;height:88px"><span class="round" style="font-size:22px">Cerbo</span><span style="font-size:13px;opacity:.75">(monitor)</span></div>
+  <div style="position:absolute;left:186px;top:282px;width:600px;border-top:5px dashed #c7cdd6"></div>
+  <svg style="position:absolute;left:452px;top:254px" width="60" height="60" viewBox="0 0 60 60"><path d="M10 10 L50 50 M50 10 L10 50" stroke="#c9403a" stroke-width="8" stroke-linecap="round"/></svg>
+  <div class="box d1 round" style="left:800px;top:240px;width:140px;height:88px;font-size:34px">D1</div>
+  <div style="position:absolute;left:186px;top:340px;width:600px;text-align:center;color:var(--muted);font-size:16px">
+    The monitor has no way to send anything. It can only listen, so the D1 always decides by itself.</div>
+</div>
+
+<!-- ======================================================================= reading the numbers -->
+<div data-figure="explained-reading" style="width:1040px;height:470px">
+  <div class="round" style="position:absolute;left:0;right:0;top:22px;text-align:center;font-size:24px">Which way is the energy going?</div>
+  <!-- buck -->
+  <div class="label" style="left:40px;top:76px;color:var(--lv)">Buck: 48 V helps 12 V</div>
+  <div class="bat round" style="left:40px;top:110px;width:110px;height:76px;background:var(--hv)">48 V</div>
+  <div class="flowline" style="left:158px;top:147px;width:56px;color:var(--lv)"></div>
+  <div class="box d1 round" style="left:216px;top:116px;width:110px;height:64px;font-size:26px">D1</div>
+  <div class="flowline" style="left:332px;top:147px;width:48px;color:var(--lv)"></div>
+  <div class="bat round" style="left:386px;top:110px;width:96px;height:76px;background:var(--lv)">12 V</div>
+  <div style="position:absolute;left:40px;top:206px;width:460px;font-size:16px;line-height:1.7">
+    <div>12 V side current <b style="color:var(--good)">+22 A</b> · power <b style="color:var(--good)">+295 W</b></div>
+    <div>48 V side current <b style="color:var(--bad)">−6 A</b> · power <b style="color:var(--bad)">−307 W</b></div>
+  </div>
+  <!-- boost -->
+<!-- buck -->
+  <div class="label" style="left:540px;top:76px;color:var(--hv)">Boost: 12 V helps 48 V</div>
+  <div class="bat round" style="left:540px;top:110px;width:110px;height:76px;background:var(--hv)">48 V</div>
+  <div class="flowline" style="left:658px;top:147px;width:56px;color:var(--hv)"></div>
+  <div class="box d1 round" style="left:716px;top:116px;width:110px;height:64px;font-size:26px">D1</div>
+  <div class="flowline" style="left:832px;top:147px;width:48px;color:var(--hv)"></div>
+  <div class="bat round" style="left:886px;top:110px;width:96px;height:76px;background:var(--lv)">12 V</div>
+  <div style="position:absolute;left:540px;top:206px;width:460px;font-size:16px;line-height:1.7">
+    <div>12 V side current <b style="color:var(--bad)">−40 A</b> · power <b style="color:var(--bad)">−520 W</b></div>
+    <div>48 V side current <b style="color:var(--good)">+9 A</b> · power <b style="color:var(--good)">+470 W</b></div>
+  </div>
+  <div style="position:absolute;left:40px;right:40px;top:296px;border-top:2px solid var(--line)"></div>
+  <div style="position:absolute;left:40px;right:40px;top:312px;font-size:17px;line-height:1.6;color:var(--ink)">
+    <b style="color:var(--good)">+</b> means energy is going <b>into</b> that battery, <b style="color:var(--bad)">−</b> means it's coming <b>out</b>.
+    The side that's being charged is the one with the plus sign. The 48 V side always shows a little more
+    than the 12 V side gets in buck (and the other way round in boost): that difference is the D1's own losses.
+    <div style="color:var(--muted);font-size:14px;margin-top:6px">The D1's documents don't say which way its current is counted. The monitor shows exactly what the D1 reports; check the sign once with a clamp meter.</div>
+  </div>
+</div>
+
+<!-- ======================================================================= testing steps -->
+<div data-figure="explained-testing-steps" style="width:1000px;height:400px">
+  <div class="round" style="position:absolute;left:30px;top:22px;color:var(--good);font-size:21px">At every step the Cerbo sends nothing: it can't change what the D1 does</div>
+  <div style="position:absolute;left:30px;top:60px;width:900px;border-top:4px solid var(--good)"></div>
+  <div class="step" style="left:30px;height:140px"><div class="n round">1</div><b>Pretend D1</b><span>no cable, no risk</span></div>
+  <div class="step" style="left:262px;height:185px"><div class="n round">2</div><b>Check the wires, power off</b><span>60 Ω? no shorts?</span></div>
+  <div class="step" style="left:494px;height:230px"><div class="n round">3</div><b>Just listen</b><span>do the numbers match your meter?</span></div>
+  <div class="step" style="left:726px;height:275px;border-color:var(--hv);background:#eaf1fa"><div class="n round" style="color:var(--hv)">4</div><b>Install and watch</b><span>cards on the Cerbo, in VRM, and charts on the web page</span></div>
+</div>
+
+</body>
+</html>

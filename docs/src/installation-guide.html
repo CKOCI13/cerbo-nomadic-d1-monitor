@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Nomadic D1 DC-DC Converter Monitor on your Victron Cerbo GX - Installation Guide</title>
+<link rel="stylesheet" href="print.css">
+</head>
+<body>
+
+<!-- ======================================================================= cover -->
+<div class="kicker">Installation guide · monitor v2.0</div>
+<h1>Nomadic D1 DC-DC converter monitor<br>on your Victron Cerbo GX</h1>
+<div class="rule"></div>
+<p>Make the cable, set up the Cerbo, and install the monitor. When you're done, the D1's readings appear on the
+Cerbo screen, in the VRM app and on a web page with live charts.</p>
+<p><b>It only watches.</b> The monitor listens to the D1 and never sends it anything, so the D1 keeps working exactly
+as it does today, on its own built-in logic.</p>
+
+<img src="../images/cerbo-readings.png" style="width:100%">
+<p class="caption">What you'll see on the Cerbo screen when you're done (drawn from Victron's own screen design, so the real screen may differ slightly).</p>
+
+<div class="cols">
+  <div class="panel green"><h3>You'll be able to see</h3><ul>
+    <li>12 V and 48 V side voltage, current and power</li>
+    <li>The D1's temperature, what it's doing (standby, autonomous, derating…) and every alarm, in plain words</li>
+    <li>Charts of the last 24 hours on a web page</li>
+    <li>Everything in the VRM app on your phone</li></ul></div>
+  <div class="panel blue"><h3>Good to know</h3><ul>
+    <li>It takes about 1 hour, including making the cable</li>
+    <li>Nothing changes for the D1. The Cerbo can't send it any commands</li>
+    <li>You don't need to type any commands. The <b>Cerbo Setup</b> helper does it for you</li></ul></div>
+</div>
+
+<div class="strip">
+  <div><b>STEP 1</b>Get what you need</div><div><b>STEP 2</b>Make the cable</div><div><b>STEP 3</b>Set up the Cerbo</div>
+  <div><b>STEP 4</b>Connect everything</div><div><b>STEP 5</b>Install the monitor</div><div><b>STEP 6</b>Use it</div>
+</div>
+
+<!-- ======================================================================= 1 -->
+<h2 class="page"><span class="num">1</span>Get what you need</h2>
+<p>Gather everything before you start.</p>
+<div class="cols">
+  <div>
+    <h3>For the cable</h3>
+    <ul>
+      <li>A standard Ethernet patch cable (Cat5e or Cat6), long enough to reach from the Cerbo to the D1</li>
+      <li>Two crimp contacts to add CAN_H and CAN_L to the D1's 6-pin signal plug (TE Connectivity connector
+        1-967616-1, per the D1 manual). Ask Nomadic or a TE distributor for the matching plug and contacts, or for a
+        ready-made pigtail</li>
+      <li>A ring terminal (M8) or a free spot on your ground bus, for the CAN ground wire</li>
+      <li>Wire cutters, a wire stripper and a crimp tool for the TE contacts</li>
+      <li>Heat-shrink tubing or electrical tape</li>
+      <li>A multimeter with a continuity (beep) setting and an Ohms setting</li>
+      <li>A VE.Can terminator: the small RJ45 plug that came in the Cerbo box</li>
+      <li>A 120 Ω resistor (¼ W) for the D1 end. Required: the D1 has no built-in terminator</li>
+    </ul>
+  </div>
+  <div>
+    <h3>For the software</h3>
+    <ul>
+      <li>A Windows PC on the same network (Wi-Fi or Ethernet) as the Cerbo</li>
+      <li>The project folder downloaded from GitHub, which contains <b>Cerbo Setup.bat</b> and the
+        <b>dbus-nomadic-dcdc</b> folder</li>
+      <li>The Cerbo running Venus OS <b>v3.80 or newer</b>. Step 3 shows you how to check</li>
+    </ul>
+    <div class="panel red"><h3>Safety</h3>
+      Before you work on the D1's wiring, switch off its 12 V supply (KL30/KL15) and follow the D1 manual. The CAN
+      cable only carries data, but it ends next to the D1's 48 V and 12 V power terminals.</div>
+  </div>
+</div>
+
+<!-- ======================================================================= 2 -->
+<h2 class="page"><span class="num">2</span>Make the cable</h2>
+<p>The Cerbo uses <b>RJ45 sockets</b>, the same plug as network cables. The easiest way is to take a ready-made network
+cable, keep the plug on one end for the Cerbo, and cut off the other end. You only need <b>3 of its 8 wires</b>: CAN_H and
+CAN_L go into the D1's signal plug, and the CAN ground goes to the common ground.</p>
+<h3>The whole connection</h3>
+<img src="../images/wiring-connection.png" style="width:96%">
+<p class="caption">Blue: the network cable you make (CAN), with the required 120 Ω resistor across CAN_H and CAN_L at the D1.
+Green: CAN ground to the D1's common ground. Red: the D1's own 12 V wires (KL30 and KL15). If your D1 already works today,
+the red wires are already in place.</p>
+<h3>Which wire goes where</h3>
+<img src="../images/wiring-pins.png" style="width:96%">
+<p class="caption">Pins 7 and 8 are the <b>brown pair</b> (twisted together), which suits CAN well. Pin 3 is <b>white/green</b> on
+most cables (T568B), or <b>white/orange</b> on T568A cables. The multimeter check in step 2b tells you which.</p>
+
+<img class="page" src="../images/wiring-connectors.png" style="width:86%">
+<table>
+  <tr><th>Wire</th><th>RJ45 pin (Cerbo)</th><th>Goes to (D1)</th></tr>
+  <tr><td>white/brown</td><td>7</td><td><b>Pin 1 CAN_H</b> on the 6-pin signal connector</td></tr>
+  <tr><td>brown</td><td>8</td><td><b>Pin 2 CAN_L</b> on the 6-pin signal connector</td></tr>
+  <tr><td>white/green (white/orange on T568A)</td><td>3</td><td><b>Common ground</b>: the D1's GND terminal, or the ground
+    bus it's bolted to. The D1's signal connector has no ground pin</td></tr>
+  <tr><td colspan="2">The other 5 wires (pins 1, 2, 4, 5, 6)</td><td>Not used. Cut them short and insulate each one</td></tr>
+</table>
+<p class="caption" style="text-align:left">Sources: Victron's <i>VE.Can to CAN-bus BMS cables manual</i> (Cerbo side: pin 7 CAN-H,
+pin 8 CAN-L, pin 3 GND) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, Rev C (signal connector pinout).</p>
+
+<h3>Make it</h3>
+<div class="step"><div class="id">2a</div><div><b>Cut off one plug.</b> Keep the other plug for the Cerbo. Strip about 5 cm (2 in) of the grey outer jacket.</div></div>
+<div class="step"><div class="id">2b</div><div><b>Check the wires with a multimeter</b> on the continuity (beep) setting. Touch one probe to a gold contact on the plug and the other to a wire:
+  <ul><li>Pin 7 should beep with <b>white/brown</b></li><li>Pin 8 should beep with <b>brown</b></li>
+  <li>Pin 3 should beep with <b>white/green</b>. If it beeps with white/orange instead, use white/orange as the CAN ground</li></ul></div></div>
+<div class="step"><div class="id">2c</div><div><b>Insulate the 5 wires you don't need.</b> Cut them short and cover <b>each one</b> separately with heat-shrink or tape, so none can touch anything.</div></div>
+<div class="step"><div class="id">2d</div><div><b>Add CAN_H and CAN_L to the D1's signal plug.</b> With the D1 switched off, crimp contacts onto
+  <b>white/brown</b> (into <b>pin 1, CAN_H</b>) and <b>brown</b> (into <b>pin 2, CAN_L</b>). Keep the brown pair twisted together as close to the
+  plug as you can. If your D1 is already wired, unplug the existing signal plug and add the two contacts to it.</div></div>
+<div class="step"><div class="id">2e</div><div><b>Connect the CAN ground.</b> Put a ring terminal on the <b>white/green</b> wire and connect it to the
+  <b>common ground</b>: the D1's GND terminal, or the ground bus that terminal is bolted to.</div></div>
+<div class="panel red" style="margin:8pt 0">Never connect any of the network-cable wires to the D1's HV+ or LV+ terminals. CAN_H and CAN_L only go to pins 1 and 2 of the signal plug.</div>
+<div class="step"><div class="id">2f</div><div><b>Check the D1's own 12 V wires (KL30 and KL15).</b> The D1 needs both to work at all, and without them it's also
+  silent on CAN. If your D1 already works today, they're already in place: just check them.
+  <table><tr><th>Pin</th><th>Connect to</th></tr>
+  <tr><td>4 KL30</td><td>A permanent 12 V supply (9–16 V, up to 2 A) through a 3 A fuse close to the 12 V source</td></tr>
+  <tr><td>3 KL15</td><td>A 12 V "enable" signal (8 V or more = on). Link it to KL30 to keep the D1 always enabled, or wire it through a switch, ignition or relay</td></tr>
+  <tr><td>5, 6</td><td>Nothing. The manual says "do not connect"</td></tr></table></div></div>
+<div class="step"><div class="id">2g</div><div><b>Fit the 120 Ω resistor at the D1.</b> The D1 has no built-in terminator, so connect a 120 Ω resistor between CAN_H and
+  CAN_L at the D1 end, for example between the white/brown and brown wires where they meet the signal plug. Insulate it with heat-shrink.<br>
+  <b>Check:</b> with the RJ45 plug not yet in the Cerbo, measure between the white/brown and brown wires (or pins 7 and 8 of the RJ45 plug). It should read about <b>120 Ω</b>.</div></div>
+<div class="step"><div class="id">2h</div><div><b>Final check:</b> plug the RJ45 into the Cerbo port you'll use, with the VE.Can terminator in that port's other socket. With everything switched off, measure between white/brown and brown again:
+  <table><tr><th>You measure</th><th>Meaning</th></tr>
+  <tr><td>About 60 Ω</td><td>Correct: both ends are terminated</td></tr>
+  <tr><td>About 120 Ω</td><td>The VE.Can terminator isn't in the Cerbo port's other socket, or the cable is in a different port</td></tr>
+  <tr><td>Very high or "OL"</td><td>The resistor at the D1 isn't connected. Re-check step 2g</td></tr></table></div></div>
+
+<!-- ======================================================================= 3 + 4 -->
+<h2 class="page"><span class="num">3</span>Set up the Cerbo</h2>
+<p>Do this on the Cerbo's touchscreen, or remotely with Remote Console in VRM. Every item below is found from the Settings menu.</p>
+<div class="step"><div class="id">3a</div><div><b>Check the firmware version.</b> Go to <b>Settings › General › Firmware</b>. It needs to be <b>v3.80 or newer</b>. If it's older, use <b>Online updates</b> on the same page to update first.</div></div>
+<div class="step"><div class="id">3b</div><div><b>Write down the Cerbo's IP address.</b> Go to <b>Settings › Connectivity › Ethernet</b> (or Wi-Fi) and read the IP address.<br>IP address: <span class="write"></span></div></div>
+<div class="step"><div class="id">3c</div><div><b>Choose the CAN port and speed.</b> Go to <b>Settings › Connectivity › BMS-Can port</b> (or another CAN port that has nothing
+  else plugged in) and set <b>CAN-bus profile</b> to <b>Up, but no services (250 kbit/s)</b>. The D1 talks at either 250 or 500 kbit/s. Start with 250.
+  Step 5c shows each port's speed, and tells you if the D1 is talking at the other speed. Then change the profile to <b>Up, but no services (500 kbit/s)</b>.</div></div>
+<div class="step"><div class="id">3d</div><div><b>Let your PC connect to the Cerbo</b> (this switches on SSH):
+  <ol><li>Go to <b>Settings › General › Access &amp; Security › Access level</b> and choose <b>User &amp; Installer</b>. The password is <code>ZZZ</code>.</li>
+  <li>Still on the Access &amp; Security page, drag the list down with your finger and hold it for about 5 seconds. The access level changes to <b>Superuser</b>.</li>
+  <li>Tap <b>Root password</b> and choose a password (at least 8 characters).<br>Root password: <span class="write"></span></li>
+  <li>Switch <b>Enable SSH on LAN</b> to on.</li></ol></div></div>
+
+<h2><span class="num">4</span>Connect everything</h2>
+<div class="step"><div class="id">4a</div><div>Plug the cable's RJ45 plug into the CAN port you chose in 3c, with the VE.Can terminator in the port's other socket (as in step 2h).</div></div>
+<div class="step"><div class="id">4b</div><div>Plug the D1's signal plug back in and switch its 12 V supply (KL30/KL15) back on.</div></div>
+<div class="panel green" style="margin-top:8pt">Nothing changes for the D1, now or later. The monitor can only listen: it has no way to send the D1 a command.</div>
+
+<!-- ======================================================================= 5 -->
+<h2 class="page"><span class="num">5</span>Install the monitor with Cerbo Setup</h2>
+<div class="step"><div class="id">5a</div><div><b>Open the helper.</b> In the project folder, double-click <code>Cerbo Setup.bat</code>. If Windows shows "Windows protected your PC", click <b>More info</b> and then <b>Run anyway</b>.</div></div>
+<div class="step"><div class="id">5b</div><div><b>Type the Cerbo's IP address</b> from step 3b and press <b>Enter</b>. The helper remembers it for next time, and then shows its menu:</div></div>
+<pre>  ===========================================================
+    Nomadic DC-DC monitor  -  Cerbo GX setup
+    Cerbo address: 192.168.1.50
+    Monitor only: nothing is ever sent to the converter
+  ===========================================================
+
+    1  Edit the settings (config.ini)
+    2  Find which Cerbo port the converter is on
+    3  Watch live readings from the converter
+    4  Install or update the monitor on the Cerbo
+    5  Show the monitor log
+
+    9  Try it with a pretend converter (simulation)
+
+    6  Change the Cerbo address
+    7  Fix "REMOTE HOST IDENTIFICATION HAS CHANGED"
+    8  Uninstall the monitor from the Cerbo
+    0  Exit
+
+  Type a number and press Enter: _</pre>
+<div class="panel blue"><b>Want to see it first?</b> Option <b>9</b> runs everything with a pretend D1 and no CAN bus at all (see the Safe Test Plan, <code>docs/safe-test-plan.pdf</code>).</div>
+<div class="panel amber" style="margin-top:6pt"><b>The password prompt.</b> Every option that talks to the Cerbo asks for the root password from step 3d.
+  <b>Nothing appears on screen while you type it.</b> That's normal: type it and press Enter.</div>
+<div class="step"><div class="id">5c</div><div><b>Type <code>2</code>: find the converter.</b> The helper copies the monitor to the Cerbo and listens on every CAN port for 3 seconds. You should see something like this:</div></div>
+<pre>Venus OS v3.80 OK
+Listening 3 s on each CAN port (nothing is transmitted)...
+  can0    250 kbit/s  error-active  nothing from the converter
+  can1    250 kbit/s  error-active  <span class="ok">CONVERTER FOUND (391 frames)</span>
+<span class="ok">The converter is on can1, which matches config.ini. Good.</span></pre>
+<p>If it says "In config.ini set: interface = can0", make that change in the next step. If the D1 is set to the other speed, you'll see bus errors instead:</p>
+<pre>  can1    250 kbit/s  error-passive nothing decoded, but 288 bus errors: talking at a different speed?
+Something is talking on can1 at a different speed. On the Cerbo, set that port's CAN-bus
+profile to "Up, but no services (500 kbit/s)" and run this again.</pre>
+<p>Do what it says (step 3c), then type <code>2</code> again. If nothing is heard at all, see Troubleshooting, and check the KL30/KL15 supply first.</p>
+<div class="step"><div class="id">5d</div><div><b>Type <code>1</code>: edit the settings.</b> Notepad opens <code>config.ini</code>. Check these lines, then press Ctrl+S to save and close Notepad:
+  <table><tr><th>Line</th><th>What to put</th></tr>
+  <tr><td><code>interface = can1</code></td><td>The port that step 5c found</td></tr>
+  <tr><td><code>custom_name = DC-DC D1</code></td><td>The name shown on the Cerbo and in VRM</td></tr>
+  <tr><td><code>password =</code></td><td>Optional: a password for the web page. Without one, anyone on your network can see the readings (but can't change anything)</td></tr>
+  <tr><td><code>switch_pane = yes</code></td><td>Leave as yes to get the cards on the Cerbo screen and in VRM</td></tr></table></div></div>
+<div class="step"><div class="id">5e</div><div><b>Type <code>3</code>: watch the live readings</b> (optional, but a good check). The voltages should match what a meter shows on the D1's terminals. To stop, press Ctrl+C, then type N and press Enter.</div></div>
+<pre>--- can1 10:42:07  ONLINE  0x066=20/s 0x088=100/s 0x520=10/s
+LV  13.4 V  +22 A   +295 W | HV  51.2 V   -6 A   -307 W | 35 C
+Mode: Autonomous (default set-point) | Precharge not in process
+Alarms: none
+Software 1.2.3  Hardware 5</pre>
+<div class="step"><div class="id">5f</div><div><b>Type <code>4</code>: install.</b> After about 10 seconds you should see:</div></div>
+<pre>/service/dbus-nomadic-dcdc: up (pid 1834) 6 seconds
+... INFO: Nomadic DC-DC monitor 2.0.0 starting on can1 (monitor only: nothing is transmitted)
+... INFO: Converter online on can1</pre>
+<p><b>Done!</b> It now starts by itself after every reboot and firmware update.</p>
+<div class="panel amber"><b>Upgrading from the old control version (1.x)?</b> Installing this monitor (option 4) replaces it. If the old version was
+  in Off, Buck or Boost, its commands stop when the monitor starts, and nobody knows yet whether the D1 then goes back to its own logic
+  or keeps the last command. So first switch the old version to <b>Automatic</b> (it then sends nothing), check the D1 behaves as it does on its own,
+  and only then install. If it seems stuck, switch KL15 off and on to restart its controller.</div>
+
+<!-- ======================================================================= 6 -->
+<h2 class="page"><span class="num">6</span>Use it</h2>
+<h3>On the Cerbo screen (and Remote Console)</h3>
+<p>Tap the <b>switches icon</b> at the top left of the screen. Three cards appear (swipe if your screen shows fewer at once):</p>
+<img src="../images/cerbo-readings.png" style="width:92%">
+<table>
+  <tr><th>Card</th><th>Item</th><th>Shows</th></tr>
+  <tr><td rowspan="3"><b>DC-DC D1</b></td><td>Alarm</td><td>The most serious active alarm, or None. The tile turns red on a fault, and "N active" appears when there are several</td></tr>
+  <tr><td>Status</td><td>What the D1 says it's doing: Standby, Autonomous, Buck, Boost, Derating (hot)… or <b>No communication</b></td></tr>
+  <tr><td>Temperature</td><td>The D1's power board temperature, in your Cerbo's temperature unit</td></tr>
+  <tr><td><b>DC-DC D1 12 V side</b><br><b>DC-DC D1 48 V side</b></td><td>Current, Power, Voltage</td><td>Live readings for that battery side. <b>+</b> means energy going into that battery, <b>−</b> coming out (see below)</td></tr>
+</table>
+<p>To rename, move or hide any item, go to <b>Settings › Device list › DC-DC D1</b>. A hidden <b>Precharge status</b> item is there too (the D1 manual doesn't use precharge).
+The D1 also appears in the <b>Device list</b> as a DC-DC converter, with its 12 V side as the output and its 48 V side as the input.</p>
+
+<div class="cols page">
+  <div>
+    <h3>In the VRM app and portal</h3>
+    <p>The same cards appear in the <b>Switches</b> widget in the VRM app, and in the <b>Switches</b> panel on the VRM portal dashboard.
+    The Cerbo must be online with VRM. Nothing needs to be changed in VRM's access settings: there is nothing to control.</p>
+    <p class="caption" style="text-align:left">The picture is an illustration. VRM draws its own version of these cards, so the layout may differ a little.</p>
+    <h3>On a web page, with charts</h3>
+    <p>On any phone, tablet or computer on the same network, open:</p>
+    <p style="font-size:13pt"><b>http://&lt;Cerbo IP&gt;:8088</b></p>
+    <p>It shows the live readings, which way the energy is flowing, every alarm, the raw status bits, and charts of the
+    last 10 minutes to 24 hours. Point at a chart to read the values at that moment. The history starts again when the monitor restarts.</p>
+  </div>
+  <div><img src="../images/vrm-app.png" style="width:44%"><p class="caption">VRM app, Switches widget (illustration)</p></div>
+</div>
+<img src="../images/web-page.png" style="width:62%;break-before:avoid">
+<p class="caption">The web page, with a pretend D1 (simulation).</p>
+
+<h3 class="page">When something is wrong</h3>
+<img src="../images/cerbo-alarm.png" style="width:60%">
+<p class="caption">An example: the D1 is hot, so it's limiting its power (derating). The alarm shows the most serious problem first.</p>
+
+<h3>Reading the numbers</h3>
+<img src="../images/explained-reading.png" style="width:100%">
+<p>On its own, the D1 <b>bucks</b> (charges the 12 V side from 48 V) when the 12 V side drops below 12.5 V, as long as the 48 V side
+is 41–58 V, and fills it back up to about 13.4 V. It <b>boosts</b> (pushes 12 V energy up to 48 V) when the 12 V side is 13.5–16 V,
+until it falls below 12.3 V. In between it waits in <b>Standby</b>, with no current.</p>
+
+<!-- ======================================================================= troubleshooting -->
+<h2><span class="num">?</span>Troubleshooting</h2>
+<table>
+  <tr><th style="width:36%">What you see</th><th>What to do</th></tr>
+  <tr><td>Option 2: "not heard on any port"</td><td>Check, in this order: (1) the D1 has KL30 (pin 4, 9–16 V) and KL15 (pin 3, 8 V or more), measured to GND. Without both, its controller is off and silent; (2) the CAN speed: if it reports bus errors, switch to the other speed (step 3c); (3) the wires (2b), and that CAN_H/CAN_L are in pins 1/2 of the D1 plug; (4) the termination reads about 60 Ω (2h); (5) the cable is in the Cerbo port you set up.</td></tr>
+  <tr><td>"ssh" or "tar" is not recognized</td><td>Install the Windows OpenSSH client: Settings › Apps › Optional features › Add a feature › OpenSSH Client.</td></tr>
+  <tr><td>"Connection timed out" or "Connection refused"</td><td>Check the IP address (menu option 6), that the PC and Cerbo are on the same network, and that Enable SSH on LAN is on (step 3d).</td></tr>
+  <tr><td>"Permission denied"</td><td>Wrong root password. Set it again (step 3d, item 3).</td></tr>
+  <tr><td>"REMOTE HOST IDENTIFICATION HAS CHANGED"</td><td>This happens after the Cerbo is reset or replaced. Use menu option 7, then try again.</td></tr>
+  <tr><td>Option 2: Venus OS version warning</td><td>Update the Cerbo (step 3a). Older firmware can't show the cards.</td></tr>
+  <tr><td>Nothing appears in the switch pane</td><td>Check the firmware is v3.80 or newer. Use option 5 (log) and look for "Registered … on D-Bus". Make sure <code>switch_pane = yes</code> in config.ini.</td></tr>
+  <tr><td>Status shows Standby</td><td>Normal when the 12 V side is between 12.5 and 13.5 V: the D1 has nothing to do.</td></tr>
+  <tr><td>Status shows No communication</td><td>The Cerbo can't hear the D1. Check KL30/KL15, the cable and the termination.</td></tr>
+  <tr><td>The charts say "Collecting data…"</td><td>They add a point every 10 seconds. Wait a minute. They start empty after every restart of the monitor or the Cerbo.</td></tr>
+  <tr><td>The "DC system" figure on the Cerbo looks wrong</td><td>The Cerbo counts the D1 as a DC-DC charger. Set <code>service_class = nomadicdcdc</code> in config.ini (option 1, then 4). The D1 leaves the device list, but the cards, VRM and web page keep working.</td></tr>
+</table>
+<p><b>To change settings later,</b> open Cerbo Setup, choose 1 to edit config.ini, save, then choose 4. <b>To remove it,</b> choose 8 and type YES. The D1 is not affected either way.</p>
+
+
+</body>
+</html>

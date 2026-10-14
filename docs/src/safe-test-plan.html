@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Nomadic D1 DC-DC Converter Monitor - Safe Test Plan</title>
+<link rel="stylesheet" href="print.css">
+</head>
+<body>
+<div class="kicker">Safe test plan · monitor v2.0</div>
+<h1>Bringing the D1 monitor into service,<br>one safe step at a time</h1>
+<div class="rule"></div>
+<p>The monitor only listens: it has no way to send the D1 anything, so <b>no step here can change what the D1 does</b>. The
+risks are the usual ones of working near batteries, and a wiring mistake. Each stage checks one thing before the next. Stop at the
+first thing that looks wrong.</p>
+
+<img src="../images/explained-testing-steps.png" style="width:92%">
+
+<div class="cols">
+  <div class="panel blue"><h3>What protects you</h3><ul>
+    <li>The D1 itself: it stops on 12 V side over 16–18 V or under 8 V, 48 V side over 58–60 V or under 24 V, over 213 A, a short, or a board temperature over 120 °C (D1 manual)</li>
+    <li>Your BMS and fuses on HV+, LV+ and KL30</li>
+    <li>The cable only carries data, and the monitor never transmits on it</li></ul></div>
+  <div class="panel green"><h3>Before you start</h3><ul>
+    <li>Fuses on HV+ and LV+ (D1 manual), and 3 A on KL30</li>
+    <li>A multimeter, plus a DC clamp meter if you have one</li>
+    <li>The D1 switched off (KL30/KL15) while you wire</li>
+    <li>The Installation Guide (<code>docs/installation-guide.pdf</code>) at hand</li></ul></div>
+</div>
+
+<table>
+  <tr><th style="width:12%">Stage</th><th>What</th><th>Risk</th></tr>
+  <tr><td>1</td><td>Simulation on the Cerbo</td><td>None: no converter, no CAN bus</td></tr>
+  <tr><td>2</td><td>Wiring check, everything off</td><td>None: no power</td></tr>
+  <tr><td>3</td><td>Listen</td><td>None: the Cerbo sends nothing</td></tr>
+  <tr><td>4</td><td>Installed and watching for a day</td><td>None: the Cerbo sends nothing</td></tr>
+</table>
+
+<h2 class="page"><span class="num">1</span>Simulation: no converter at all</h2>
+<p>In Cerbo Setup, choose <b>9</b>. The real monitor runs on your Cerbo against a pretend D1, and no CAN socket is ever opened. A real installation keeps running beside it.</p>
+<table class="check"><tr><th>Check</th><th>OK</th></tr>
+  <tr><td>"DC-DC D1 (SIMULATED)" cards appear in the Cerbo's switch pane, and in VRM's Switches</td><td></td></tr>
+  <tr><td>Its web page opens at <b>http://&lt;Cerbo IP&gt;:8089</b>, and the charts start filling after a minute</td><td></td></tr>
+  <tr><td>The pretend 12 V side drains to 12.5 V, then Status shows <b>Autonomous</b> and it charges back to about 13.4 V (12 V side current +, 48 V side −)</td><td></td></tr>
+  <tr><td>Every three minutes a pretend alternator pushes the 12 V side above 13.5 V and the pretend D1 boosts (12 V side current −, 48 V side +) until 12.3 V</td><td></td></tr>
+</table>
+<p>Stop with Ctrl+C. The simulated cards disappear. The pretend D1 follows the manual's logic, but it can't tell you anything about the real one.</p>
+
+<h2><span class="num">2</span>Wiring check, everything off</h2>
+<table class="check"><tr><th>Check</th><th>OK</th></tr>
+  <tr><td>Continuity: RJ45 pin 7 to white/brown, pin 8 to brown, pin 3 to white/green (guide step 2b)</td><td></td></tr>
+  <tr><td>No continuity (no beep) between any of the three network-cable wires and LV+ or HV+</td><td></td></tr>
+  <tr><td>CAN ground (white/green) to the D1 GND terminal: beeps</td><td></td></tr>
+  <tr><td>RJ45 not in the Cerbo: white/brown to brown reads about 120 Ω (your resistor at the D1)</td><td></td></tr>
+  <tr><td>RJ45 in the Cerbo, with the VE.Can terminator in the other socket: about 60 Ω</td><td></td></tr>
+</table>
+
+<h2><span class="num">3</span>Listen</h2>
+<p>Power the D1 as normal (KL30 and KL15 on). In Cerbo Setup choose <b>2</b> (find), then <b>3</b> (watch).</p>
+<table class="check"><tr><th>Check</th><th>What you saw</th><th>OK</th></tr>
+  <tr><td>Converter found, at the right speed (if it reports bus errors, switch speed as the guide says)</td><td></td><td></td></tr>
+  <tr><td>12 V side reading within about 0.2 V of your meter on the D1's LV+ to GND</td><td></td><td></td></tr>
+  <tr><td>48 V side reading within about 0.5 V of your meter on HV+ to GND</td><td></td><td></td></tr>
+  <tr><td>While the D1 is converting: which side shows + current? Check with the clamp meter which way the current really flows</td><td></td><td></td></tr>
+  <tr><td>No alarms, or only alarms that make sense (for example low voltage when the battery really is low)</td><td></td><td></td></tr>
+</table>
+
+<h2><span class="num">4</span>Installed and watching</h2>
+<p>Choose <b>4</b> (install). Leave it running for a day.</p>
+<table class="check"><tr><th>Check</th><th>OK</th></tr>
+  <tr><td>Three cards on the Cerbo, in VRM and on the web page, with sensible readings</td><td></td></tr>
+  <tr><td>The web page's charts cover the day, with no gaps you can't explain (a gap means the D1 went quiet, or the Cerbo restarted)</td><td></td></tr>
+  <tr><td>The D1 behaves exactly as before: buck when the 12 V side is low, boost when it's high, standby otherwise</td><td></td></tr>
+  <tr><td>After a Cerbo reboot the monitor comes back by itself (option 5 shows "Converter online")</td><td></td></tr>
+</table>
+<div class="panel amber"><b>Please share what you found:</b> which way the current sign went in stage 3, and anything that didn't match. Open an issue on the project's GitHub page.</div>
+<p style="margin-top:18pt">Tested and signed off by: <span class="write" style="min-width:200pt"></span> &nbsp; Date: <span class="write" style="min-width:90pt"></span></p>
+</body>
+</html>
