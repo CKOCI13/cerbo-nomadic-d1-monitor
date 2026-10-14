@@ -158,6 +158,8 @@ pin 8 CAN-L, pin 3 GND) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, 
     4  Install or update the monitor on the Cerbo
     5  Show the monitor log
 
+    U  Make a USB-stick installer (no network needed)
+
     9  Try it with a pretend converter (simulation)
 
     6  Change the Cerbo address
@@ -197,6 +199,17 @@ Software 1.2.3  Hardware 5</pre>
 ... INFO: Nomadic DC-DC monitor 2.0.0 starting on can1 (monitor only: nothing is transmitted)
 ... INFO: Converter online on can1</pre>
 <p><b>Done!</b> It now starts by itself after every reboot and firmware update.</p>
+<h3>No network to the Cerbo? Install from a USB stick instead</h3>
+<p>Venus OS can install add-ons from a USB stick or microSD card by itself, with no SSH or password. Do this instead of 5c–5f:</p>
+<div class="step"><div class="id">U1</div><div>In Cerbo Setup, type <code>1</code> and set <code>interface</code> (and anything else) in config.ini. The stick's
+  settings replace the ones on the Cerbo. When Cerbo Setup asks for the IP address, you can just press Enter.</div></div>
+<div class="step"><div class="id">U2</div><div>Type <code>U</code>. It makes <code>venus-data.tar.gz</code> in the project folder. Copy it to the <b>top folder</b> of a USB stick or SD card (FAT32).</div></div>
+<div class="step"><div class="id">U3</div><div>Put the stick in the Cerbo and restart it (<b>Settings › General › Reboot</b>, or switch it off and on).
+  The Cerbo unpacks the file and installs the monitor while it starts.</div></div>
+<div class="step"><div class="id">U4</div><div><b>After about 2 minutes, take the stick out.</b> While it stays in, every restart unpacks it again and puts its settings back.
+  Then open the switch pane: the DC-DC D1 cards should be there.</div></div>
+<div class="panel amber">Without SSH you can't run "find the converter" (5c). If the Status card says <b>No communication</b>,
+  check the CAN port you chose in 3c, its speed (250 / 500 kbit/s) and the wiring, change <code>interface</code> if needed, and repeat U1–U4.</div>
 <div class="panel amber"><b>Upgrading from the old control version (1.x)?</b> Installing this monitor (option 4) replaces it. If the old version was
   in Off, Buck or Boost, its commands stop when the monitor starts, and nobody knows yet whether the D1 then goes back to its own logic
   or keeps the last command. So first switch the old version to <b>Automatic</b> (it then sends nothing), check the D1 behaves as it does on its own,

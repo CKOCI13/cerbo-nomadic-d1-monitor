@@ -232,6 +232,15 @@ is older than v3.80.
   starts it within seconds and restarts it if it stops), and adds itself to `/data/rc.local`, so the link is
   re-created after every boot and firmware update.
 - **Logs** go to `/var/log/dbus-nomadic-dcdc/current`, via `multilog`.
+- **USB stick / SD card:** at boot, Venus OS's
+  [`update-data.sh`](https://github.com/victronenergy/meta-victronenergy/blob/master/meta-venus/recipes-core/initscripts/files/update-data.sh)
+  unpacks any `venus-data.tar.gz` (or `.tgz` / `.zip`) it finds into `/data`, overwriting files, then runs
+  `rc/post-hook.sh` from the archive with `success` or `extraction-failed` (`rc/` itself isn't copied).
+  [`usb/rc/post-hook.sh`](../usb/rc/post-hook.sh) runs `install.sh` on success. That's early in the boot, possibly
+  before `/service` exists, but `install.sh` also adds itself to `/data/rc.local`, which runs later in the same boot.
+  [`make-usb-installer.sh`](../make-usb-installer.sh) and Cerbo Setup option U build the archive (`dbus-nomadic-dcdc/`
+  plus `rc/`, without the run-time `*.json` files). It unpacks again on every boot while the stick is in, so the
+  docs tell people to remove it.
 - **[`Cerbo Setup.bat`](../Cerbo%20Setup.bat)** sends the folder with `tar | ssh` (one password prompt), then
   tightens the file permissions on the Cerbo, because Windows `tar` marks files as writable by everyone.
 - **Upgrading from 1.x** reuses the same folder, service name and D-Bus name, so installing over it replaces the

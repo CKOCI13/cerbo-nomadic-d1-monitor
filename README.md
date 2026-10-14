@@ -112,7 +112,8 @@ Follow the **[Installation Guide (PDF)](docs/installation-guide.pdf)**. It has p
 2. **Set up the Cerbo.** Check the firmware version, choose the CAN port and its speed, and allow your PC to connect.
 3. **Connect everything.**
 4. **Run [`Cerbo Setup.bat`](Cerbo%20Setup.bat)** on your Windows PC. It finds the converter, lets you edit the
-   settings, and installs the monitor with a menu: no commands to type.
+   settings, and installs the monitor with a menu: no commands to type. No network connection to the Cerbo?
+   See [Installing from a USB stick](#installing-from-a-usb-stick-or-sd-card-no-network-needed) below.
 5. **Check it** with the **[Safe Test Plan (PDF)](docs/safe-test-plan.pdf)**: four short stages, none of which can
    change what the D1 does.
 
@@ -120,6 +121,30 @@ After installing, the monitor starts by itself whenever the Cerbo starts, includ
 
 **Switching from [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1) (the control version)?** Put it in **Automatic** first, so it's already sending nothing,
 then install. See the note in the Installation Guide, step 5.
+
+### Installing from a USB stick or SD card (no network needed)
+
+Venus OS has a built-in way to install add-ons from a USB stick or microSD card: at every start, it looks for a
+file called `venus-data.tar.gz`, unpacks it into the Cerbo's `/data` folder, and runs an install hook inside it
+([Victron's `update-data.sh`](https://github.com/victronenergy/meta-victronenergy/blob/master/meta-venus/recipes-core/initscripts/files/update-data.sh)). This project's hook installs the monitor as a service, so you don't need SSH,
+a root password or the Superuser access level.
+
+1. **Settings first.** Edit [`dbus-nomadic-dcdc/config.ini`](dbus-nomadic-dcdc/config.ini) on your computer
+   (at least `interface`; see the [driver reference](dbus-nomadic-dcdc/README.md)). The stick's copy replaces
+   the one on the Cerbo.
+2. **Make the file.** On Windows, run `Cerbo Setup.bat` and choose **U** (you can just press Enter when it asks
+   for the Cerbo's IP address). On Mac or Linux, run `sh make-usb-installer.sh`. Either way you get
+   `venus-data.tar.gz` in the project folder.
+3. **Copy it** to the top folder of a USB stick or SD card (FAT32 is the safe choice), not inside another folder.
+4. **Put the stick in the Cerbo and restart it** (Settings › General › Reboot, or switch it off and on).
+5. **After about 2 minutes, take the stick out.** While it stays in, every restart unpacks it again and puts the
+   stick's `config.ini` back.
+6. Open the **switch pane** on the Cerbo screen: the DC-DC D1 cards should be there.
+
+To change settings later, repeat from step 1. Without SSH you can't run "find the converter" (`--scan`), so set the
+CAN port and its profile as the Installation Guide describes: if the Status card says **No communication**, check
+the port, its CAN-bus profile (250 / 500 kbit/s) and the wiring. To remove the monitor you still need SSH
+(`sh /data/dbus-nomadic-dcdc/uninstall.sh`) or Cerbo Setup option 8.
 
 ## Why monitor only?
 
@@ -185,6 +210,8 @@ The **[developer guide](docs/developer-guide.md)** explains the design in detail
 cerbo-nomadic-d1-monitor/
 ├── README.md                 ← you are here
 ├── Cerbo Setup.bat           ← Windows helper: copies, tests and installs the monitor on the Cerbo
+├── make-usb-installer.sh     ← Mac/Linux: makes venus-data.tar.gz for a USB-stick install
+├── usb/rc/post-hook.sh       ← run by the Cerbo after a USB-stick install: installs the service
 ├── dbus-nomadic-dcdc/        ← the monitor itself: this whole folder goes onto the Cerbo
 │   ├── dbus-nomadic-dcdc.py      the monitor program
 │   ├── nomadic_can.py            decodes the D1's CAN messages

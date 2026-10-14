@@ -34,3 +34,6 @@ desktop.ini
 # Only needed to rebuild the docs (docs/src/build.cjs)
 node_modules/
 package-lock.json
+
+# Made by make-usb-installer.sh / Cerbo Setup option U
+venus-data.tar.gz

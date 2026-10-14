@@ -72,6 +72,14 @@ scp -O -r dbus-nomadic-dcdc root@<GX-IP>:/data/
 
 (Leave out `-O` with OpenSSH older than 9.0.) Everything under `/data` survives firmware updates.
 
+### Or: install from a USB stick or SD card
+
+Edit `config.ini` first, then build `venus-data.tar.gz` (`Cerbo Setup.bat` option U, or `sh make-usb-installer.sh`
+in the project folder), copy it to the top folder of a FAT32 USB stick or SD card, put it in the GX and restart.
+Venus OS unpacks it into `/data` and runs its `rc/post-hook.sh`, which runs `install.sh`: steps 4 and 7 are done
+for you, with no SSH. **Take the stick out afterwards**, or every restart unpacks it again and restores its
+`config.ini`. See the [project README](../README.md#installing-from-a-usb-stick-or-sd-card-no-network-needed).
+
 ## 5. Find the converter and check communication
 
 ```

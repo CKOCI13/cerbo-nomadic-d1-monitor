@@ -36,6 +36,8 @@ echo    3  Watch live readings from the converter
 echo    4  Install or update the monitor on the Cerbo
 echo    5  Show the monitor log
 echo.
+echo    U  Make a USB-stick installer (no network needed)
+echo.
 echo    9  Try it with a pretend converter (simulation)
 echo.
 echo    6  Change the Cerbo address
@@ -54,6 +56,7 @@ if "%CHOICE%"=="6" goto changeip
 if "%CHOICE%"=="7" goto hostkey
 if "%CHOICE%"=="8" goto uninstall
 if "%CHOICE%"=="9" goto sim
+if /i "%CHOICE%"=="U" goto usb
 if "%CHOICE%"=="0" exit /b 0
 goto menu
 
@@ -99,6 +102,30 @@ echo.
 ssh -t %SSHOPT% root@%CERBO% "python3 -u %REMOTE%/dbus-nomadic-dcdc.py --simulate"
 goto done
 
+:usb
+cls
+echo.
+echo  Making a USB-stick installer
+echo  -----------------------------------------------------------
+echo.
+tar --exclude=__pycache__ --exclude=state*.json --exclude=ui*.json --exclude=*.tmp -czf venus-data.tar.gz %DRIVER% -C usb rc
+if errorlevel 1 (
+    echo  Could not make the file. Windows 10 or newer is needed for the built-in "tar".
+    goto done
+)
+echo  Made venus-data.tar.gz in this folder, with the settings from config.ini (option 1).
+echo.
+echo  1. Copy venus-data.tar.gz to the top folder of a USB stick or SD card
+echo     (FAT32 is the safe choice). Not inside another folder.
+echo  2. Put it in the Cerbo, then restart the Cerbo
+echo     (Settings ^> General ^> Reboot, or switch it off and on).
+echo  3. After about 2 minutes, TAKE THE STICK OUT. While it stays in, every restart
+echo     unpacks it again and puts these settings back.
+echo  4. Open the switch pane on the Cerbo screen: the DC-DC D1 cards should be there.
+echo.
+echo  To change settings later: option 1, then U again, and repeat 1 to 3.
+goto done
+
 :changeip
 call :askip
 goto menu
@@ -140,7 +167,8 @@ echo  Find the Cerbo's IP address on its screen:
 echo  Settings ^> Connectivity ^> Ethernet (or Wi-Fi) ^> IP address
 echo.
 set "CERBO="
+echo  (Installing from a USB stick instead? Just press Enter.)
 set /p "CERBO=  Type the IP address (for example 192.168.1.50) and press Enter: "
-if not defined CERBO goto askip
+if not defined CERBO (set "CERBO=not set - use option 6" & exit /b)
 > cerbo-ip.txt echo %CERBO%
 exit /b

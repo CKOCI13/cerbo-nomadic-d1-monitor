@@ -5,6 +5,11 @@ What changed in each version of the driver (`VERSION` in `dbus-nomadic-dcdc/dbus
 This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3.0 (with control) were developed
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
+## Unreleased
+
+- **Install from a USB stick or SD card, with no network or SSH:** `Cerbo Setup.bat` option U (or
+  `make-usb-installer.sh`) makes `venus-data.tar.gz`; Venus OS unpacks it at boot and its hook installs the service.
+
 ## 2.0.0 (2026-10-14): monitor only
 
 The driver is now a **monitor**: it listens to the D1 and never sends it anything. Control (Automatic / Off / Buck /
