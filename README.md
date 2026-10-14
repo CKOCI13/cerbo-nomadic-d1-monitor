@@ -223,8 +223,14 @@ Contributions are welcome: open an issue or a pull request.
 **Will installing this change how my D1 behaves?**
 No. The monitor only listens. It has no code that can send the D1 anything.
 
+**My D1 blows a fuse or overloads a cable. Can this help?**
+It can show you the problem: the web page charts the current on each side, so you can see how high it goes and
+when. It can't limit it, because it never sends the D1 anything. The **[control edition](https://github.com/CKOCI13/cerbo-nomadic-d1#limiting-current-to-protect-fuses-and-wiring)**
+(for advanced users) can hold the D1 to a lower current, with important limits explained there. The lasting fix is
+a fuse and cable sized for the D1's maximum currents, or asking Nomadic to lower the D1's own current limit.
+
 **Can I control the D1 from the Cerbo, then?**
-Not with this one. The original project, [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), can. Control was left out here until it's
+Not with this one. The control edition, [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), can; it's meant for advanced users. Control was left out here until it's
 known how the D1 behaves when commands stop. The two use the same folder and service name on the Cerbo, so only
 one of them is installed at a time: installing one replaces the other.
 
