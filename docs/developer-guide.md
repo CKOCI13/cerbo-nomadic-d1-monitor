@@ -235,13 +235,15 @@ is older than v3.80.
 - **Logs** go to `/var/log/dbus-nomadic-dcdc/current`, via `multilog`.
 - **USB stick / SD card:** at boot, Venus OS's
   [`update-data.sh`](https://github.com/victronenergy/meta-victronenergy/blob/master/meta-venus/recipes-core/initscripts/files/update-data.sh)
-  unpacks any `venus-data.tar.gz` (or `.tgz` / `.zip`) it finds into `/data`, overwriting files, then runs
+  unpacks any `venus-data.tar.gz` or `venus-data-*.tar.gz` (or `.tgz` / `.zip`) it finds into `/data`, overwriting files, then runs
   `rc/post-hook.sh` from the archive with `success` or `extraction-failed` (`rc/` itself isn't copied).
   [`usb/rc/post-hook.sh`](../usb/rc/post-hook.sh) runs `install.sh` on success. That's early in the boot, possibly
   before `/service` exists, but `install.sh` also adds itself to `/data/rc.local`, which runs later in the same boot.
   [`make-usb-installer.sh`](../make-usb-installer.sh) and Cerbo Setup option U build the archive (`dbus-nomadic-dcdc/`
-  plus `rc/`, without the run-time `*.json` files). It unpacks again on every boot while the stick is in, so the
-  docs tell people to remove it.
+  plus `rc/`, without the run-time `*.json` files). The archive is named `venus-data-nomadic-d1-monitor.tar.gz`; after a good install the hook renames it on the stick to
+  `...tar.gz.installed`, so it unpacks only once. Windows `tar` marks files writable by everyone, so `install.sh`
+  removes group/other write permission. Venus OS v3.60+ renames `/data/rc.local` at every boot when *Modification
+  checks* has modifications disabled; the docs tell installers to keep them enabled (the default).
 - **[`Cerbo Setup.bat`](../Cerbo%20Setup.bat)** sends the folder with `tar | ssh` (one password prompt), then
   tightens the file permissions on the Cerbo, because Windows `tar` marks files as writable by everyone.
 - **Upgrading from 1.x** reuses the same folder, service name and D-Bus name, so installing over it replaces the
@@ -265,6 +267,16 @@ node docs/src/build.cjs       # all of it; or add: figures | web | pdf
 The older explainer pictures (`explained-overview`, `-today`, `-after`, `-cable`, `-automatic`) and the three
 `wiring-*.png` diagrams (cut from the version 1 guide at 300 dpi) are kept as files; they didn't change. The Cerbo
 and VRM pictures are drawings in Victron's style, not screenshots.
+
+## Finding the CAN port (`interface = auto`)
+
+Port names differ between Cerbo models (`can0`/`can1` on the original, `vecan0`/`vecan1` on the MK2), and a
+USB-stick install can't run `--scan`, so the default is `interface = auto`. `AutoCanBus` wraps `CanBus`: its first
+`recv()` (in the rx thread) calls `find_converter()` repeatedly, which opens a filtered, listen-only socket on each
+CAN interface in `/sys/class/net` for one second and accepts the first port with at least `AUTO_MIN_FRAMES`
+standard-ID frames carrying the converter's IDs (other traffic, such as a battery BMS on 0x35x, doesn't count).
+It then binds that port for good, writes it into `cfg['can']['interface']` (so the web page and `/Mgmt/Connection`
+show it) and logs it. The D-Bus service is `nomadic_auto`. The monitor's `AutoCanBus` has no `send()` at all.
 
 ## Tests
 
