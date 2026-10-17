@@ -40,7 +40,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.0.0'
+VERSION = '2.1.0'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -55,7 +55,7 @@ log = logging.getLogger('nomadic-dcdc')
 
 DEFAULTS = {
     'can': {
-        'interface': 'can1',
+        'interface': 'auto',
         'timeout': '1.0',
     },
     'dbus': {
@@ -225,9 +225,14 @@ class StatusWatcher:
     """Logs when the converter goes on/offline and when alarms appear or clear."""
 
     def __init__(self, interface):
-        self.interface = interface
+        self._interface = interface
+        self.bus = None   # set to the bus, so "auto" is reported as the port it found
         self.online = None
         self.alarms = set()
+
+    @property
+    def interface(self):
+        return getattr(self.bus, 'interface', None) or self._interface
 
     def __call__(self, snap):
         if snap['online'] != self.online:
@@ -279,6 +284,85 @@ class CanBus:
 
     def close(self):
         self._rx.close()
+
+
+
+AUTO = 'auto'
+AUTO_MIN_FRAMES = 5   # frames with the converter's IDs needed to accept a port (it sends ~130 a second)
+
+
+def can_ports():
+    """Names of the CAN interfaces (can0, can1, vecan0, vecan1 ...), from /sys/class/net."""
+    try:
+        names = sorted(os.listdir(SYS_NET))
+    except OSError:
+        return []
+    return [n for n in names if _read_int(os.path.join(SYS_NET, n, 'type')) == 280]   # ARPHRD_CAN
+
+
+def find_converter(seconds=1.0):
+    """Listen (transmitting nothing) on each CAN port for up to `seconds` and return the first port
+    the converter is heard on, or None. Only standard-ID frames with the converter's IDs count."""
+    for name in can_ports():
+        try:
+            bus = CanBus(name)
+        except OSError:
+            continue
+        heard = 0
+        try:
+            end = time.monotonic() + seconds
+            while time.monotonic() < end:
+                frame = bus.recv()
+                if frame and frame[0] in nc.RX_IDS:
+                    heard += 1
+                    if heard >= AUTO_MIN_FRAMES:
+                        return name
+        except OSError:
+            pass
+        finally:
+            bus.close()
+    return None
+
+
+class AutoCanBus:
+    """interface = auto: listens on every CAN port until the converter is heard, then uses only that
+    port. Monitor only: it never transmits on any port."""
+
+    SEARCH_PAUSE = 2.0
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.interface = AUTO
+        self._bus = None
+
+    def _search(self):
+        log.info('interface = auto: looking for the converter on %s',
+                 ', '.join(can_ports()) or 'any CAN port (none found yet)')
+        last_log = time.monotonic()
+        while True:
+            name = find_converter()
+            if name:
+                bus = CanBus(name)
+                self.cfg['can']['interface'] = name
+                self.interface = name
+                self._bus = bus
+                log.info('Converter found on %s; using that port', name)
+                return
+            if time.monotonic() - last_log >= 60:
+                last_log = time.monotonic()
+                log.warning('Converter still not heard on %s. Check its power, the CAN cable and '
+                            'terminators, and the port\'s CAN-bus profile (250 / 500 kbit/s).',
+                            ', '.join(can_ports()) or 'any CAN port')
+            time.sleep(self.SEARCH_PAUSE)
+
+    def recv(self):
+        if self._bus is None:
+            self._search()
+        return self._bus.recv()
+
+    def close(self):
+        if self._bus is not None:
+            self._bus.close()
 
 
 class SimulatedD1:
@@ -520,6 +604,7 @@ class DbusService:
 
         svc.add_path('/Mgmt/ProcessName', os.path.abspath(__file__))
         svc.add_path('/Mgmt/ProcessVersion', VERSION)
+        self.can_cfg = cfg['can']
         svc.add_path('/Mgmt/Connection', 'CAN ' + iface + ' (monitor only)')
         svc.add_path('/DeviceInstance', d.getint('device_instance'))
         svc.add_path('/ProductId', 0xFFFF)
@@ -589,6 +674,9 @@ class DbusService:
         return ok
 
     def refresh(self, snap):
+        connection = 'CAN ' + self.can_cfg['interface'] + ' (monitor only)'
+        if self.svc['/Mgmt/Connection'] != connection:   # interface = auto has found its port
+            self.svc['/Mgmt/Connection'] = connection
         s = self.svc
         e, p, v = snap['electric'], snap['parameter'], snap['version']
 
@@ -647,7 +735,7 @@ class WebApp:
         self.telemetry = telemetry
         self.history = history
         self.name = cfg['dbus']['custom_name']
-        self.interface = cfg['can']['interface']
+        self.can_cfg = cfg['can']   # live: shows the port "auto" found
         self.password = cfg['web']['password']
         with open(os.path.join(BASE_DIR, 'webui.html'), 'rb') as f:
             self.page = f.read()
@@ -657,7 +745,7 @@ class WebApp:
         e = snap['electric']
         return {
             'name': self.name,
-            'interface': self.interface,
+            'interface': self.can_cfg['interface'],
             'driver_version': VERSION,
             'monitor_only': True,
             'online': snap['online'],
@@ -755,6 +843,12 @@ def start_web(cfg, app):
 
 def run_monitor(interface, timeout):
     """Prints decoded frames once a second (Cerbo Setup option 3)."""
+    if interface == AUTO:
+        print('interface = auto: looking for the converter on every CAN port (nothing is transmitted)...')
+        interface = None
+        while interface is None:
+            interface = find_converter()
+        print('Converter found on %s.' % interface)
     bus = CanBus(interface)
     telemetry = Telemetry(timeout)
     start_thread('can-rx', rx_worker, bus, telemetry)
@@ -866,7 +960,10 @@ def run_scan(configured, seconds=3.0):
         state = can_state or _read_text(os.path.join(net, name, 'operstate')) or '?'
         print('  %-7s %-11s %-13s %s' % (name, speed, state.lower(), result))
     if len(found) == 1:
-        if found[0] == configured:
+        if configured == AUTO:
+            print('The converter is on %s. config.ini has interface = auto, so the driver finds it '
+                  'there by itself. Good.' % found[0])
+        elif found[0] == configured:
             print('The converter is on %s, which matches config.ini. Good.' % found[0])
         else:
             print('The converter is on %s. In config.ini set:  interface = %s' % (found[0], found[0]))
@@ -940,7 +1037,13 @@ def main():
         DBusGMainLoop(set_as_default=True)
         dbus_service = DbusService(cfg, UiSettings(os.path.join(BASE_DIR, ui_file)))
 
-    bus = SimulatedD1() if args.simulate else CanBus(interface)
+    if args.simulate:
+        bus = SimulatedD1()
+    elif interface == AUTO:
+        bus = AutoCanBus(cfg)
+    else:
+        bus = CanBus(interface)
+    watcher.bus = bus
     start_thread('can-rx', rx_worker, bus, telemetry)
     if cfg['web'].getint('port'):
         start_web(cfg, WebApp(cfg, telemetry, history))

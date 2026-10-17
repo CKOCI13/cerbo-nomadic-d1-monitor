@@ -37,3 +37,4 @@ package-lock.json
 
 # Made by make-usb-installer.sh / Cerbo Setup option U
 venus-data.tar.gz
+venus-data-*.tar.gz

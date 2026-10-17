@@ -126,7 +126,7 @@ pin 8 CAN-L, pin 3 GND) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, 
 <!-- ======================================================================= 3 + 4 -->
 <h2 class="page"><span class="num">3</span>Set up the Cerbo</h2>
 <p>Do this on the Cerbo's touchscreen, or remotely with Remote Console in VRM. Every item below is found from the Settings menu.</p>
-<div class="step"><div class="id">3a</div><div><b>Check the firmware version.</b> Go to <b>Settings › General › Firmware</b>. It needs to be <b>v3.80 or newer</b>. If it's older, use <b>Online updates</b> on the same page to update first.</div></div>
+<div class="step"><div class="id">3a</div><div><b>Check the firmware version.</b> Go to <b>Settings › General › Firmware</b>. It needs to be <b>v3.80 or newer</b>. If it's older, use <b>Online updates</b> on the same page to update first.<br>Then go to <b>Settings › General › Modification checks</b> and make sure <b>modifications are enabled</b> (that's the default). If they are off, Venus OS switches off the start-up script and the driver disappears after the next restart.</div></div>
 <div class="step"><div class="id">3b</div><div><b>Write down the Cerbo's IP address.</b> Go to <b>Settings › Connectivity › Ethernet</b> (or Wi-Fi) and read the IP address.<br>IP address: <span class="write"></span></div></div>
 <div class="step"><div class="id">3c</div><div><b>Choose the CAN port and speed.</b> Use the Cerbo's second CAN port, with nothing else plugged into it. The labels next to the ports tell you which Cerbo you have:
   <ul><li><b>Cerbo GX MK2</b> (ports labeled <b>VE.Can 1</b> and <b>VE.Can 2</b>): go to <b>Settings › Connectivity › VE.Can port 2</b> (some firmware still calls it <b>BMS-Can port</b>) and set <b>CAN-bus profile</b> to <b>Up, but no services (250 kbit/s)</b>. The D1 talks at either 250 or 500 kbit/s. Start with 250. Step 5c shows each port's speed, and tells you if the D1 is talking at the other speed. Then change the profile to <b>Up, but no services (500 kbit/s)</b>.</li>
@@ -176,15 +176,15 @@ pin 8 CAN-L, pin 3 GND) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, 
 Listening 3 s on each CAN port (nothing is transmitted)...
   can0    250 kbit/s  error-active  nothing from the converter
   can1    250 kbit/s  error-active  <span class="ok">CONVERTER FOUND (391 frames)</span>
-<span class="ok">The converter is on can1, which matches config.ini. Good.</span></pre>
-<p>If it says "In config.ini set: interface = can0", make that change in the next step. If the D1 is set to the other speed, you'll see bus errors instead:</p>
+<span class="ok">The converter is on can1. config.ini has interface = auto, so the driver finds it there by itself. Good.</span></pre>
+<p>Port names differ between Cerbo models (<code>can1</code>, or <code>vecan1</code> on the MK2). That's fine: with <code>interface = auto</code> the driver uses whichever port the D1 is on. If the D1 is set to the other speed, you'll see bus errors instead:</p>
 <pre>  can1    250 kbit/s  error-passive nothing decoded, but 288 bus errors: talking at a different speed?
 Something is talking on can1 at a different speed. On the Cerbo, set that port's CAN-bus
 profile to "Up, but no services (500 kbit/s)" and run this again.</pre>
 <p>Do what it says (step 3c), then type <code>2</code> again. If nothing is heard at all, see Troubleshooting, and check the KL30/KL15 supply first.</p>
 <div class="step"><div class="id">5d</div><div><b>Type <code>1</code>: edit the settings.</b> Notepad opens <code>config.ini</code>. Check these lines, then press Ctrl+S to save and close Notepad:
   <table><tr><th>Line</th><th>What to put</th></tr>
-  <tr><td><code>interface = can1</code></td><td>The port that step 5c found</td></tr>
+  <tr><td><code>interface = auto</code></td><td>Leave as auto: the driver finds the D1's CAN port by itself</td></tr>
   <tr><td><code>custom_name = DC-DC D1</code></td><td>The name shown on the Cerbo and in VRM</td></tr>
   <tr><td><code>password =</code></td><td>Optional: a password for the web page. Without one, anyone on your network can see the readings (but can't change anything)</td></tr>
   <tr><td><code>switch_pane = yes</code></td><td>Leave as yes to get the cards on the Cerbo screen and in VRM</td></tr></table></div></div>
@@ -196,20 +196,19 @@ Alarms: none
 Software 1.2.3  Hardware 5</pre>
 <div class="step"><div class="id">5f</div><div><b>Type <code>4</code>: install.</b> After about 10 seconds you should see:</div></div>
 <pre>/service/dbus-nomadic-dcdc: up (pid 1834) 6 seconds
-... INFO: Nomadic DC-DC monitor 2.0.0 starting on can1 (monitor only: nothing is transmitted)
+... INFO: Nomadic DC-DC monitor 2.1.0 starting on auto (monitor only: nothing is transmitted)
 ... INFO: Converter online on can1</pre>
 <p><b>Done!</b> It now starts by itself after every reboot and firmware update.</p>
 <h3>No network to the Cerbo? Install from a USB stick instead</h3>
 <p>Venus OS can install add-ons from a USB stick or microSD card by itself, with no SSH or password. Do this instead of 5c–5f:</p>
-<div class="step"><div class="id">U1</div><div>In Cerbo Setup, type <code>1</code> and set <code>interface</code> (and anything else) in config.ini. The stick's
-  settings replace the ones on the Cerbo. When Cerbo Setup asks for the IP address, you can just press Enter.</div></div>
-<div class="step"><div class="id">U2</div><div>Type <code>U</code>. It makes <code>venus-data.tar.gz</code> in the project folder. Copy it to the <b>top folder</b> of a USB stick or SD card (FAT32).</div></div>
+<div class="step"><div class="id">U1</div><div><b>Get the file.</b> Download <code>venus-data-nomadic-d1-monitor.tar.gz</code> from the latest release (<a href="https://github.com/CKOCI13/cerbo-nomadic-d1-monitor/releases/latest">https://github.com/CKOCI13/cerbo-nomadic-d1-monitor/releases/latest</a>). It has the standard settings, with <code>interface = auto</code>, so there's nothing to edit. To change settings first, edit config.ini (Cerbo Setup option <code>1</code>) and type <code>U</code> to make your own copy of the file. On a Mac, download it with Chrome or Firefox: Safari can unpack it into a <code>.tar</code> file, which the Cerbo ignores.</div></div>
+<div class="step"><div class="id">U2</div><div>Copy it to the <b>top folder</b> of a USB stick or SD card (FAT32), not inside another folder. Put only <b>one</b> <code>venus-data</code> file on the stick.</div></div>
 <div class="step"><div class="id">U3</div><div>Put the stick in the Cerbo and restart it (<b>Settings › General › Reboot</b>, or switch it off and on).
   The Cerbo unpacks the file and installs the monitor while it starts.</div></div>
-<div class="step"><div class="id">U4</div><div><b>After about 2 minutes, take the stick out.</b> While it stays in, every restart unpacks it again and puts its settings back.
+<div class="step"><div class="id">U4</div><div><b>Wait about 2 minutes, then take the stick out.</b> The Cerbo renames the file on the stick to <code>...tar.gz.installed</code>, so it never installs twice.
   Then open the switch pane: the DC-DC D1 cards should be there.</div></div>
 <div class="panel amber">Without SSH you can't run "find the converter" (5c). If the Status card says <b>No communication</b>,
-  check the CAN port you chose in 3c, its speed (250 / 500 kbit/s) and the wiring, change <code>interface</code> if needed, and repeat U1–U4.</div>
+  check the CAN port you chose in 3c, its speed (250 / 500 kbit/s) and the wiring, and restart the Cerbo. To install again, use a fresh file (U1).</div>
 <div class="panel amber"><b>Upgrading from the old control version (1.x)?</b> Installing this monitor (option 4) replaces it. If the old version was
   in Off, Buck or Boost, its commands stop when the monitor starts, and nobody knows yet whether the D1 then goes back to its own logic
   or keeps the last command. So first switch the old version to <b>Automatic</b> (it then sends nothing), check the D1 behaves as it does on its own,

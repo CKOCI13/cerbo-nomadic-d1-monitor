@@ -82,11 +82,11 @@ scp -O -r dbus-nomadic-dcdc root@<GX-IP>:/data/
 
 ### Or: install from a USB stick or SD card
 
-Edit `config.ini` first, then build `venus-data.tar.gz` (`Cerbo Setup.bat` option U, or `sh make-usb-installer.sh`
-in the project folder), copy it to the top folder of a FAT32 USB stick or SD card, put it in the GX and restart.
+Download `venus-data-nomadic-d1-monitor.tar.gz` from the [latest release](https://github.com/CKOCI13/cerbo-nomadic-d1-monitor/releases/latest) (or edit `config.ini` and build your own with
+`Cerbo Setup.bat` option U or `sh make-usb-installer.sh`), copy it to the top folder of a FAT32 USB stick or SD card,
+put it in the GX and restart. Modifications must be enabled (*Settings › General › Modification checks*, the default).
 Venus OS unpacks it into `/data` and runs its `rc/post-hook.sh`, which runs `install.sh`: steps 4 and 7 are done
-for you, with no SSH. **Take the stick out afterwards**, or every restart unpacks it again and restores its
-`config.ini`. See the [project README](../README.md#installing-from-a-usb-stick-or-sd-card-no-network-needed).
+for you, with no SSH. The hook then renames the file on the stick to `...tar.gz.installed`, so it installs only once. See the [project README](../README.md#installing-from-a-usb-stick-or-sd-card-no-network-needed).
 
 ## 5. Find the converter and check communication
 
@@ -103,7 +103,8 @@ the termination and the bitrate (`ip -details link show can1`).
 
 Edit `config.ini`:
 
-* `interface`: the port that `--scan` reported
+* `interface`: leave it on `auto` (the driver uses the CAN port it hears the D1 on), or force the port that
+  `--scan` reported. Names differ between models: `can0`/`can1`, or `vecan0`/`vecan1` on the Cerbo GX MK2
 * `custom_name`: the name on the GX and in VRM (default "DC-DC D1")
 * `password`: optional, for the web page
 * `switch_pane = no` if you don't want the cards on the GX screen and in VRM
@@ -174,7 +175,7 @@ but the switch pane, VRM Switches, D-Bus, MQTT and the web page keep working.
 
 ### D-Bus / MQTT / Node-RED
 
-Service: `com.victronenergy.dcdc.nomadic_<interface>` (MQTT: `N/<portal-id>/dcdc/<device_instance>/...`).
+Service: `com.victronenergy.dcdc.nomadic_<interface>` (`nomadic_auto` with the default `interface = auto`) (MQTT: `N/<portal-id>/dcdc/<device_instance>/...`).
 Every value path is read-only.
 
 | Path | Meaning |

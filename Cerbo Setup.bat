@@ -108,22 +108,22 @@ echo.
 echo  Making a USB-stick installer
 echo  -----------------------------------------------------------
 echo.
-tar --exclude=__pycache__ --exclude=state*.json --exclude=ui*.json --exclude=*.tmp -czf venus-data.tar.gz %DRIVER% -C usb rc
+tar --exclude=__pycache__ --exclude=state*.json --exclude=ui*.json --exclude=*.tmp -czf venus-data-nomadic-d1-monitor.tar.gz %DRIVER% -C usb rc
 if errorlevel 1 (
     echo  Could not make the file. Windows 10 or newer is needed for the built-in "tar".
     goto done
 )
-echo  Made venus-data.tar.gz in this folder, with the settings from config.ini (option 1).
+echo  Made venus-data-nomadic-d1-monitor.tar.gz in this folder, with the settings from config.ini (option 1).
 echo.
-echo  1. Copy venus-data.tar.gz to the top folder of a USB stick or SD card
+echo  1. Copy venus-data-nomadic-d1-monitor.tar.gz to the top folder of a USB stick or SD card
 echo     (FAT32 is the safe choice). Not inside another folder.
 echo  2. Put it in the Cerbo, then restart the Cerbo
 echo     (Settings ^> General ^> Reboot, or switch it off and on).
-echo  3. After about 2 minutes, TAKE THE STICK OUT. While it stays in, every restart
-echo     unpacks it again and puts these settings back.
+echo  3. Wait about 2 minutes. The Cerbo renames the file on the stick to
+echo     ...tar.gz.installed so it never installs twice. Then take the stick out.
 echo  4. Open the switch pane on the Cerbo screen: the DC-DC D1 cards should be there.
 echo.
-echo  To change settings later: option 1, then U again, and repeat 1 to 3.
+echo  To change settings later: option 1, then U again (a fresh file), and repeat 1 to 3.
 goto done
 
 :changeip

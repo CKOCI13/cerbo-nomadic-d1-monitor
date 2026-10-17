@@ -1,11 +1,12 @@
-"""Tests for the USB-stick / SD-card installer (venus-data.tar.gz).
+"""Tests for the USB-stick / SD-card installer (venus-data-nomadic-*.tar.gz).
 
-Venus OS unpacks venus-data.tar.gz into /data at boot and then runs rc/post-hook.sh from the
+Venus OS unpacks venus-data*.tar.gz into /data at boot and then runs rc/post-hook.sh from the
 archive (update-data.sh in Victron's meta-victronenergy). These tests build the archive with
 make-usb-installer.sh and check it has exactly that shape.
 """
 
 import os
+import re
 import shutil
 import subprocess
 import tarfile
@@ -27,7 +28,7 @@ class UsbInstallerTest(unittest.TestCase):
         open(os.path.join(self.tmp, 'dbus-nomadic-dcdc', 'ui.json'), 'w').close()
         subprocess.run(['sh', os.path.join(self.tmp, 'make-usb-installer.sh')], check=True,
                        stdout=subprocess.DEVNULL)
-        with tarfile.open(os.path.join(self.tmp, 'venus-data.tar.gz')) as t:
+        with tarfile.open(os.path.join(self.tmp, 'venus-data-nomadic-d1-monitor.tar.gz')) as t:
             self.names = {n.rstrip('/') for n in t.getnames()}
             self.hook = t.extractfile('rc/post-hook.sh').read().decode()
 
@@ -47,6 +48,12 @@ class UsbInstallerTest(unittest.TestCase):
         self.assertNotIn('\r', self.hook)                     # Unix line endings, or sh fails
         self.assertIn('[ "$1" = "success" ] || exit 0', self.hook)
         self.assertIn('sh /data/dbus-nomadic-dcdc/install.sh', self.hook)
+
+    def test_installs_once_by_renaming_the_file_on_the_stick(self):
+        # Venus OS only unpacks venus-data*.tar.gz; the renamed file is left alone on later boots
+        self.assertIn('/media/*/venus-data-nomadic-d1-monitor.tar.gz', self.hook)
+        self.assertIn('mv -f "$f" "$f.installed"', self.hook)
+        self.assertTrue(re.fullmatch(r'venus-data-[a-z0-9-]+\.tar\.gz', 'venus-data-nomadic-d1-monitor.tar.gz'))
 
 
 if __name__ == '__main__':

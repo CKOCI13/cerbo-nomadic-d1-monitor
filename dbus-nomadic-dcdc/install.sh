@@ -5,6 +5,8 @@ DIR=/data/dbus-nomadic-dcdc
 
 chmod 755 "$DIR/dbus-nomadic-dcdc.py" "$DIR/install.sh" "$DIR/uninstall.sh" \
     "$DIR/service/run" "$DIR/service/log/run"
+# A file made with Windows' tar (USB install) marks everything writable by everyone
+chmod -R go-w "$DIR"
 
 # /service is rebuilt on every boot and firmware update, so this runs from rc.local
 ln -sfn "$DIR/service" /service/dbus-nomadic-dcdc
