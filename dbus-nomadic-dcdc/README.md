@@ -44,8 +44,11 @@ You can see it on:
 * The bus needs exactly **two 120 Ω terminators**: a VE.Can terminator in the GX port's second socket, and
   a **120 Ω resistor between CAN_H and CAN_L at the D1** (the D1 has no built-in terminator). With everything
   connected and off, CAN-H to CAN-L should measure about 60 Ω.
-* Use a port that has nothing else on it. On a Cerbo GX, the VE.Can port is `can0` and the BMS-Can port is
-  `can1`. `--scan` (below) shows which one the converter is on.
+* Use a port that has nothing else on it, normally the Cerbo's **second CAN port** (usually `can1`; `--scan`,
+  below, lists the real names and shows which one the converter is on):
+  * **Cerbo GX MK2** (ports labeled VE.Can 1 and VE.Can 2): use **VE.Can 2**. It is not isolated: its CAN GND
+    is the Cerbo's own negative, which is one more reason to take RJ45 pin 3 to the common ground.
+  * **Original Cerbo GX** (second port labeled BMS-Can): BMS-Can only runs at **500 kbit/s** (see section 2).
 
 ## 2. Bitrate and port profile
 
@@ -53,6 +56,11 @@ The D1 talks at either 250 or 500 kbit/s, and the GX port must match it. On the 
 **Settings → Connectivity → (your CAN port) → CAN-bus profile** and choose **"Up, but no services (250 kbit/s)"**.
 If `--scan` reports bus errors but no frames, the D1 is at the other speed: switch to
 "Up, but no services (500 kbit/s)".
+
+On a Cerbo GX MK2 the second port's menu is **VE.Can port 2** (some firmware still calls it BMS-Can port).
+On an **original Cerbo GX**, the BMS-Can port can't be set to "Up, but no services": its only choices are
+**CAN-bus BMS (500 kbit/s)** and disabled. Leave it on CAN-bus BMS (500 kbit/s). It works only if the D1 talks
+at 500 kbit/s; if `--scan` reports bus errors there, the D1 is at 250 kbit/s, so use the VE.Can port instead.
 
 ## 3. Root access
 

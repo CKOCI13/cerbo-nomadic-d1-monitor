@@ -31,7 +31,8 @@ see the [project README](../README.md). For every setting and D-Bus path, see th
 The monitor is one Python program, [`dbus-nomadic-dcdc.py`](../dbus-nomadic-dcdc/dbus-nomadic-dcdc.py), that runs
 as a service on a Victron GX device (Venus OS, which is Linux). It:
 
-1. **Reads** the D1's CAN messages from a SocketCAN interface (`can0` / `can1` on a Cerbo GX).
+1. **Reads** the D1's CAN messages from a SocketCAN interface (`can0` / `can1` on a Cerbo GX: `can1` is the second port, VE.Can 2 on the MK2 or the 500 kbit/s-only
+   BMS-Can on the original).
 2. **Publishes** the decoded values on D-Bus, where the Cerbo's GUI, VRM, MQTT and Node-RED pick them up. On the
    Cerbo screen they appear as three cards in the switch pane.
 3. **Keeps a history:** one averaged point every 10 seconds, 24 hours of them, in memory.
