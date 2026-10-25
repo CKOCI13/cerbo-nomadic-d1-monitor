@@ -25,6 +25,7 @@ automatically on every change; the result is the "tests" badge at the top of the
 | [`test_scan.py`](test_scan.py) | "Find the converter" finds the right port, spots a wrong bitrate from bus errors, warns about old firmware, and works without `iproute2` |
 | [`test_usb_installer.py`](test_usb_installer.py) | The USB-stick installer unpacks to `/data/dbus-nomadic-dcdc`, leaves out run-time files, and its hook runs `install.sh` only after a good unpack (needs `sh` and `tar`, so it is skipped on plain Windows) |
 | [`test_install_script.py`](test_install_script.py) | `install.sh` adds itself to `/data/rc.local` once, before any top-level `exit` another add-on left there, and leaves the file executable, as Venus OS needs (needs `sh` and `awk`) |
+| [`test_spec_conformance.py`](test_spec_conformance.py) | Independent check against the supplied documents: every CAN signal's position, scale and offset from Nomadic's interface document (read bit by bit, a different method from the driver's), the meaning of every fault, status and mode code, error values, the manual's ranges and thresholds, and the USB file name Victron's install script looks for |
 | [`test_simulation.py`](test_simulation.py) | The pretend D1 follows the manual's automatic logic (buck, standby, boost). The whole monitor runs end to end against it |
 
 ## How they run without a Cerbo

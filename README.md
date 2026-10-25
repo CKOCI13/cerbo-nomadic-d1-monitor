@@ -5,7 +5,7 @@
 
 **Monitor a Nomadic D1 DC-DC converter on a Victron Cerbo GX screen or an Android tablet.** It listens to the D1
 and shows its readings on the Cerbo's screen, in the VRM app on your phone, and on a small web page with live
-charts that any tablet, phone or laptop on the same network can open.
+charts. Any tablet, phone or laptop on the same network can open it.
 It never sends the D1 anything, so it can't change what the D1 does.
 
 ![The D1's readings on a Cerbo GX screen](docs/images/cerbo-readings.png)
@@ -63,9 +63,8 @@ New to all this? **[How it works, in plain English](docs/how-it-works.md)** expl
 - **On the Cerbo's screen:** three cards in the switch pane: the converter (alarm, status, temperature), its
   12 V side and its 48 V side. The D1 also appears in the device list as a DC-DC converter.
 - **Everywhere Victron does:** Remote Console, the VRM portal and app, MQTT and Node-RED.
-- **Its own web page** at `http://<cerbo-address>:8088`, for any tablet (Android or iPad), phone or laptop on the
-  same network, with live
-  values, which way the energy is flowing, and charts of the last 24 hours.
+- **Its own web page** at `http://<cerbo-address>:8088`. Any tablet (Android or iPad), phone or laptop on the same
+  network can open it. It shows live values, which way the energy is flowing, and charts of the last 24 hours.
 - **Help getting started:** a pretend converter for trying it out, and a "find the converter" check.
 
 | Cerbo screen | When there's a problem | VRM app |
@@ -126,8 +125,8 @@ then install. See the note in the Installation Guide, step 5.
 
 ### Installing from a USB stick or SD card (no network needed)
 
-Venus OS has a built-in way to install add-ons from a USB stick or microSD card: at start-up, it looks for a
-`venus-data` file, unpacks it into the Cerbo's `/data` folder, and runs an install hook inside it
+Venus OS has a built-in way to install add-ons from a USB stick or microSD card. At start-up, it looks for a
+`venus-data` file. It unpacks the file into the Cerbo's `/data` folder and runs the install script inside it
 ([Victron's `update-data.sh`](https://github.com/victronenergy/meta-victronenergy/blob/master/meta-venus/recipes-core/initscripts/files/update-data.sh)).
 This project's hook installs the monitor as a service, so you don't need SSH, a root password or the Superuser
 access level.
@@ -156,7 +155,7 @@ profile and speed (250 / 500 kbit/s) as the Installation Guide describes. To rem
 
 ## Why monitor only?
 
-Nomadic's documents don't say what the D1 does when the commands from a controller stop: if the Cerbo restarts
+Nomadic's documents don't say what the D1 does when the commands from a controller stop. If the Cerbo restarts
 or the cable comes loose, does it go back to its own logic, or keep doing the last thing it was told? Until that's
 known, and tested on real hardware, the safest Cerbo is one that can't command the D1 at all. So this version:
 
@@ -204,8 +203,8 @@ flowchart LR
   second, and its version 10 times a second. The monitor decodes them and publishes them on Venus OS's internal
   message bus (D-Bus). Everything else in the Cerbo (the screen, VRM, MQTT) reads them from there.
 - **Nothing goes back:** the monitor never sends anything on the CAN bus.
-- **On the screen:** the monitor uses Victron's standard "switch" interface (the same one used by GX relays and
-  smart switches), so its readings appear as cards in the Cerbo's switch pane and in VRM without changing any
+- **On the screen:** the monitor uses Victron's standard "switch" interface, the same one GX relays and smart
+  switches use. So its readings appear as cards in the Cerbo's switch pane and in VRM, without changing any
   Victron software.
 - **History:** every 10 seconds it averages the last 1,000 readings into one point and keeps 24 hours of them in
   memory, for the web page's charts.
@@ -305,6 +304,7 @@ DC-DC Converter Manual* and the *DC-DC Converter CAN Interface Control Document*
 | **CAN bus** | A two-wire network that vehicles and batteries use to exchange short messages |
 | **CAN-H / CAN-L** | The two CAN wires ("high" and "low"), twisted together |
 | **Termination** | A 120 Ω resistor at each end of a CAN bus, which stops messages reflecting back |
+| **Lever connector** | A small clear wire joiner with orange levers (for example WAGO 221). Lift a lever, push in a stripped wire, close the lever |
 | **KL30 / KL15** | Automotive names for the D1's permanent 12 V supply (KL30) and its "wake-up" / enable input (KL15) |
 | **Cerbo GX / GX device** | Victron's system monitor and controller |
 | **Venus OS** | The Linux-based software that runs on Victron GX devices |
