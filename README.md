@@ -262,6 +262,11 @@ when. It can't limit it, because it never sends the D1 anything. The **[control 
 (for advanced users) can hold the D1 to a lower current, with important limits explained there. The lasting fix is
 a fuse and cable sized for the D1's maximum currents, or asking Nomadic to lower the D1's own current limit.
 
+**I have a stock Grand Design LTV1. Is this edition enough?**
+Not to protect the wiring. The LTV1's 12 V cable is 2 AWG on a 150 A fuse, and the D1 can draw more than that from
+the 12 V side (up to about 200 A when boosting). This edition only shows the current. The control edition ships
+with limits set for the LTV1 (120 A buck, 23 A boost), which apply while the Cerbo commands Buck or Boost.
+
 **Can I control the D1 from the Cerbo, then?**
 Not with this one. The control edition, [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), can; it's meant for advanced users. Control was left out here until it's
 known how the D1 behaves when commands stop. The two use the same folder and service name on the Cerbo, so only

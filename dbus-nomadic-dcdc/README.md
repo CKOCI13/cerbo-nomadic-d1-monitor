@@ -217,7 +217,7 @@ Version 1 ([cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1)) can 
 was in Off, Buck or Boost, its command frames stop when it's replaced, and it isn't known whether the D1 then goes
 back to its own logic. So first set version 1 to **Automatic** (it then sends nothing), check the D1 behaves as it
 does on its own, and only then install version 2. If the D1 ever seems stuck, switching KL15 off and on restarts its
-controller. The old `state.json` is no longer used and can be deleted.
+controller (if KL15 is joined to KL30, as on the LTV1, pull that wire's fuse for a few seconds). The old `state.json` is no longer used and can be deleted.
 
 ## Points to confirm with Nomadic
 

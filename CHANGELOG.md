@@ -11,6 +11,8 @@ in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they c
 - **Start-up script fix (USB stick and normal installs):** Venus OS only runs `/data/rc.local` when it is executable, and when another add-on ends that file with `exit 0`, a line added after it never runs. `install.sh` now puts its line before the first top-level `exit`, moves it there if an older version left it after one, and always makes the file executable. New tests cover it, and the USB file was checked against Victron's own `update-data.sh`.
 - **USB file names:** the README and guide now warn that a browser-renamed file such as `... (1).tar.gz` is skipped by the Cerbo (names with spaces don't work) and must be renamed back.
 - **D1 manual Rev D:** references updated from Rev C. The guide now gives Rev D's fuses: 3 A for KL30 and 1 A for KL15.
+- **LTV1 FAQ:** explains that this edition can't protect a stock LTV1's 2 AWG / 150 A wiring, and points to the control edition's limits.
+- **KL15 joined to KL30** (as on the LTV1): troubleshooting now says to pull that wire's fuse to restart the D1.
 
 ## 2.1.0 (2026-10-17): test release
 
