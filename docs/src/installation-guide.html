@@ -72,8 +72,9 @@ as it does today, on its own built-in logic.</p>
 <h2 class="page"><span class="num">2</span>Make the cable</h2>
 <p>The Cerbo uses <b>RJ45 sockets</b>, the same plug as network cables. Take a ready-made network cable, keep the plug
 on one end for the Cerbo, and cut off the other end. You only need <b>2 of its 8 wires</b>: the brown pair. The D1 already
-has labelled wires coming out of its signal plug (CAN_H, CAN_L and its two voltage wires, KL15 and KL30), so you join the network cable to its CAN_H and CAN_L
-wires with <b>two lever wire connectors</b>, and put the <b>120 Ω resistor</b> between the two connectors. <b>No ground wire</b> is needed.</p>
+has labelled wires coming out of its signal plug (CAN_H, CAN_L, and two voltage wires called KL15 and KL30).
+You join the network cable to its CAN_H and CAN_L wires with <b>two lever wire connectors</b>. The <b>120 Ω resistor</b> goes
+between the two connectors. <b>No ground wire</b> is needed.</p>
 <h3>The whole connection</h3>
 <img src="../images/wiring-connection.png" style="width:96%">
 <p class="caption">Blue: the network cable you make. The two lever connectors join it to the D1's CAN_H and CAN_L wires, with
@@ -107,8 +108,8 @@ pin 8 CAN-L) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, Rev D.</p>
   Strip each wire <b>11 mm</b> (the strip gauge on the connector's side), lift the lever, push the wire fully in, and close the lever.
   <ul><li><b>Connector A (CAN-H):</b> the D1's wire labelled <b>CAN_H</b>, the <b>white/brown</b> wire, and one leg of the resistor</li>
   <li><b>Connector B (CAN-L):</b> the D1's wire labelled <b>CAN_L</b>, the <b>brown</b> wire, and the other leg of the resistor</li></ul>
-  Slide heat-shrink over both resistor legs so they can't touch each other or anything metal. Keep the brown pair twisted to within a few
-  centimetres of the connectors, and tie the connectors and cable to something solid (or put them in a small box), so vibration can't pull on them.</div></div>
+  Slide heat-shrink over both resistor legs so they can't touch each other or anything metal. Keep the brown pair twisted up to a few
+  centimetres from the connectors. Tie the connectors and cable to something solid, or put them in a small box, so road vibration can't pull on them.</div></div>
 <div class="step"><div class="id">2e</div><div><b>No ground wire.</b> CAN works on the difference between CAN_H and CAN_L. The Cerbo and the D1 already share
   the van's negative through their power wiring, so a separate CAN ground isn't needed. Leaving it off also avoids a thin wire running in
   parallel with the main negative cables (the Cerbo's VE.Can 2 port is not isolated). Once everything runs, step 5c includes a quick
@@ -134,7 +135,7 @@ pin 8 CAN-L) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, Rev D.</p>
 <div class="step"><div class="id">3a</div><div><b>Check the firmware version.</b> Go to <b>Settings › General › Firmware</b>. It needs to be <b>v3.80 or newer</b>. If it's older, use <b>Online updates</b> on the same page to update first.<br>Then go to <b>Settings › General › Modification checks</b> and make sure <b>modifications are enabled</b> (that's the default). If they are off, Venus OS switches off the start-up script and the driver disappears after the next restart.</div></div>
 <div class="step"><div class="id">3b</div><div><b>Write down the Cerbo's IP address.</b> Go to <b>Settings › Connectivity › Ethernet</b> (or Wi-Fi) and read the IP address.<br>IP address: <span class="write"></span></div></div>
 <div class="step"><div class="id">3c</div><div><b>Choose the CAN port and speed.</b> Use the Cerbo's second CAN port, with nothing else plugged into it. The labels next to the ports tell you which Cerbo you have:
-  <ul><li><b>Cerbo GX MK2</b> (ports labeled <b>VE.Can 1</b> and <b>VE.Can 2</b>): go to <b>Settings › Connectivity › VE.Can port 2</b> (some firmware still calls it <b>BMS-Can port</b>) and set <b>CAN-bus profile</b> to <b>VE.Can (250 kbit/s)</b> (the default). The D1 talks at either 250 or 500 kbit/s. Start with 250. Step 5c shows each port's speed, and tells you if the D1 is talking at the other speed. Then change the profile to <b>CAN-bus BMS LV (500 kbit/s)</b> (older firmware: <b>CAN-bus BMS (500 kbit/s)</b>).<br><small>Victron's own messages on that port use a different kind of CAN ID (29-bit) from the D1's (11-bit), so they don't get in each other's way. You may see the profile <i>Up, but no services</i> mentioned elsewhere: the Cerbo screen no longer lets you choose it, and it isn't needed.</small></li>
+  <ul><li><b>Cerbo GX MK2</b> (ports labeled <b>VE.Can 1</b> and <b>VE.Can 2</b>): go to <b>Settings › Connectivity › VE.Can port 2</b> (some firmware still calls it <b>BMS-Can port</b>) and set <b>CAN-bus profile</b> to <b>VE.Can (250 kbit/s)</b>. That is the default. The D1 talks at either 250 or 500 kbit/s, so start with 250. Step 5c tells you if the D1 is talking at the other speed. If it is, change the profile to <b>CAN-bus BMS LV (500 kbit/s)</b>. Older firmware calls it <b>CAN-bus BMS (500 kbit/s)</b>.<br><small>Victron's own messages use a different kind of CAN address from the D1's, so they don't get in each other's way. Other guides may mention a profile called <i>Up, but no services</i>. The Cerbo screen no longer offers it, and you don't need it.</small></li>
   <li><b>Original Cerbo GX</b> (second port labeled <b>BMS-Can</b>): go to <b>Settings › Connectivity › BMS-Can port</b>. This port only runs at 500 kbit/s, so leave it on <b>CAN-bus BMS (500 kbit/s)</b>. It works only if the D1 talks at 500 kbit/s. If step 5c reports bus errors on it, the D1 is at 250 kbit/s: use the VE.Can port (if nothing else is on it) with <b>VE.Can (250 kbit/s)</b> instead.</li></ul></div></div>
 <div class="step"><div class="id">3d</div><div><b>Let your PC connect to the Cerbo</b> (this switches on SSH):
   <ol><li>Go to <b>Settings › General › Access &amp; Security › Access level</b> and choose <b>User &amp; Installer</b>. The password is <code>ZZZ</code>.</li>
@@ -216,7 +217,7 @@ Software 1.2.3  Hardware 5</pre>
 <div class="panel amber">Without SSH you can't run "find the converter" (5c). If the Status card says <b>No communication</b>,
   check the CAN port you chose in 3c, its speed (250 / 500 kbit/s) and the wiring, and restart the Cerbo. To install again, use a fresh file (U1).</div>
 <div class="panel amber"><b>Upgrading from the old control version (1.x)?</b> Installing this monitor (option 4) replaces it. If the old version was
-  in Off, Buck or Boost, its commands stop when the monitor starts, and nobody knows yet whether the D1 then goes back to its own logic
+  in Off, Buck or Boost, its commands stop when the monitor starts. Nobody knows yet whether the D1 then goes back to its own logic
   or keeps the last command. So first switch the old version to <b>Automatic</b> (it then sends nothing), check the D1 behaves as it does on its own,
   and only then install. If it seems stuck, switch KL15 off and on to restart its controller (if KL15 is joined to KL30, as on the LTV1, pull that wire's fuse for a few seconds).</div>
 
@@ -258,15 +259,15 @@ The D1 also appears under <b>Settings › Devices</b> as a DC-DC converter, with
 
 <h3>Reading the numbers</h3>
 <img src="../images/explained-reading.png" style="width:100%">
-<p>On its own, the D1 <b>bucks</b> (charges the 12 V side from 48 V) when the 12 V side drops below 12.5 V, as long as the 48 V side
-is 41–58 V, and fills it back up to about 13.4 V. It <b>boosts</b> (pushes 12 V energy up to 48 V) when the 12 V side is 13.5–16 V,
+<p>On its own, the D1 <b>bucks</b> (charges the 12 V side from 48 V) when the 12 V side drops below 12.5 V. It only does this when the 48 V side
+is 41–58 V, and it fills the 12 V side back up to about 13.4 V. It <b>boosts</b> (pushes 12 V energy up to 48 V) when the 12 V side is 13.5–16 V,
 until it falls below 12.3 V. In between it waits in <b>Standby</b>, with no current.</p>
 
 <!-- ======================================================================= troubleshooting -->
 <h2><span class="num">?</span>Troubleshooting</h2>
 <table>
   <tr><th style="width:36%">What you see</th><th>What to do</th></tr>
-  <tr><td>Option 2: "not heard on any port"</td><td>Check, in this order: (1) the D1 has KL30 (pin 4, 9–16 V) and KL15 (pin 3, 8 V or more), measured to GND. Without both, its controller is off and silent; (2) the CAN speed: if it reports bus errors, switch to the other speed (step 3c); (3) the wires (2b), and that each lever connector holds the right D1 wire (CAN_H with white/brown, CAN_L with brown); (4) the termination reads about 60 Ω (2h); (5) the cable is in the Cerbo port you set up.</td></tr>
+  <tr><td>Option 2: "not heard on any port"</td><td>Check, in this order:<ol style="margin:4pt 0 0 14pt;padding:0"><li>the D1 has power on its KL30 wire (9–16 V) and its KL15 wire (8 V or more), measured to GND. Without both, its controller is off and silent</li><li>the CAN speed: if it reports bus errors, switch to the other speed (step 3c)</li><li>the wires (2b), and that each lever connector holds the right D1 wire (CAN_H with white/brown, CAN_L with brown)</li><li>the termination reads about 60 Ω (2h)</li><li>the cable is in the Cerbo port you set up</li></ol></td></tr>
   <tr><td>"ssh" or "tar" is not recognized</td><td>Install the Windows OpenSSH client: Settings › Apps › Optional features › Add a feature › OpenSSH Client.</td></tr>
   <tr><td>"Connection timed out" or "Connection refused"</td><td>Check the IP address (menu option 6), that the PC and Cerbo are on the same network, and that Enable SSH on LAN is on (step 3d).</td></tr>
   <tr><td>"Permission denied"</td><td>Wrong root password. Set it again (step 3d, item 3).</td></tr>
