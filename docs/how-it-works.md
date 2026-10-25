@@ -38,14 +38,17 @@ Your **Cerbo GX** is the screen for your whole power system. Right now it can't 
 
 ## The phone line (the cable)
 
-![The cable: two talk wires, a ground wire and an end cap at each end](images/explained-cable.png)
+![The cable: two talk wires joined with two lever connectors, and an end cap at each end](images/explained-cable.png)
 
 - **Two talk wires** (CAN-H and CAN-L) carry the messages. They're twisted together like a braid, which keeps out
   electrical noise.
-- **The "zero" wire** (ground) makes both ends agree on what zero volts means.
+- **No "zero" wire.** The Cerbo and the D1 already share the van's negative, so they agree on what zero volts
+  means without an extra ground wire.
+- **Two lever connectors** (like WAGO 221) join the talk wires to the D1's own labelled CAN-H and CAN-L wires. No
+  crimping and no opening its plug.
 - **The end caps** (120 Ω resistors) stop messages bouncing back off the ends of the line, like the foam wall at
   the end of a swimming lane. There must be exactly two: one at the Cerbo (a small plug that comes in the Cerbo's
-  box) and one at the D1. The D1 doesn't have one built in, so you add a resistor there.
+  box) and one at the D1. The D1 doesn't have one built in, so you add a resistor there: it sits between the two lever connectors.
 - **The red wires** are the D1's own "brain power" (KL30) and "wake-up" (KL15). If the D1 works today, they're
   already connected.
 

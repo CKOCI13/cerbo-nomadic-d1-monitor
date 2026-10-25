@@ -5,6 +5,12 @@ What changed in each version of the driver (`VERSION` in `dbus-nomadic-dcdc/dbus
 This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3.0 (with control) were developed
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
+## Documentation update (2026-10-25, driver unchanged)
+
+- **Cable: no CAN ground wire.** The Cerbo and the D1 already share the van's negative, and the Cerbo's VE.Can 2 port isn't isolated, so the white/green wire (RJ45 pin 3) is now left unused and insulated. The guide adds a one-time check of the voltage between the Cerbo's negative and the D1's GND.
+- **Joining with lever connectors.** The D1's signal plug already has labelled CAN_H and CAN_L wires, so the guide now joins them to the network cable's brown pair with two 3-way lever wire connectors (e.g. WAGO 221-413), with the 120 Ω resistor between the connectors. No crimping.
+- **New wiring pictures** from one shared source (`docs/src/wiring.html`, rebuilt with `node docs/src/build-wiring.cjs`), including a close-up of the two lever connectors and the resistor. Installation Guide, Safe Test Plan, driver reference, README and "How it works" updated.
+
 ## 2.1.1 (2026-10-25)
 
 - **CAN port profile you can actually choose:** the guide said to set the converter's port to *Up, but no services*. Victron's current screen software (gui-v2, Venus OS v3.80+) hides that option and won't let you pick it. The guide, the driver reference and the `--scan` advice now say **VE.Can (250 kbit/s)** or **CAN-bus BMS LV (500 kbit/s)**; the driver reference shows how to set *Up, but no services* over SSH if you want it.

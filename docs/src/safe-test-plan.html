@@ -47,9 +47,9 @@ first thing that looks wrong.</p>
 
 <h2><span class="num">2</span>Wiring check, everything off</h2>
 <table class="check"><tr><th>Check</th><th>OK</th></tr>
-  <tr><td>Continuity: RJ45 pin 7 to white/brown, pin 8 to brown, pin 3 to white/green (guide step 2b)</td><td></td></tr>
-  <tr><td>No continuity (no beep) between any of the three network-cable wires and LV+ or HV+</td><td></td></tr>
-  <tr><td>CAN ground (white/green) to the D1 GND terminal: beeps</td><td></td></tr>
+  <tr><td>Continuity: RJ45 pin 7 to white/brown, pin 8 to brown (guide step 2b)</td><td></td></tr>
+  <tr><td>No continuity (no beep) between white/brown or brown and LV+, HV+ or GND</td><td></td></tr>
+  <tr><td>Lever connector A holds the D1's CAN_H wire, white/brown and one resistor leg; B holds CAN_L, brown and the other leg. Every wire fully in, levers closed, resistor legs insulated. White/green and the other unused wires insulated (no ground wire)</td><td></td></tr>
   <tr><td>RJ45 not in the Cerbo: white/brown to brown reads about 120 Ω (your resistor at the D1)</td><td></td></tr>
   <tr><td>RJ45 in the Cerbo, with the VE.Can terminator in the other socket: about 60 Ω</td><td></td></tr>
 </table>

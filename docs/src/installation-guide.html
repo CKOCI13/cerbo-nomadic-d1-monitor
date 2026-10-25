@@ -44,15 +44,14 @@ as it does today, on its own built-in logic.</p>
     <h3>For the cable</h3>
     <ul>
       <li>A standard Ethernet patch cable (Cat5e or Cat6), long enough to reach from the Cerbo to the D1</li>
-      <li>Two crimp contacts to add CAN_H and CAN_L to the D1's 6-pin signal plug (TE Connectivity connector
-        1-967616-1, per the D1 manual). Ask Nomadic or a TE distributor for the matching plug and contacts, or for a
-        ready-made pigtail</li>
-      <li>A ring terminal (M8) or a free spot on your ground bus, for the CAN ground wire</li>
-      <li>Wire cutters, a wire stripper and a crimp tool for the TE contacts</li>
+      <li>Two <b>3-way lever wire connectors</b>, for example WAGO 221-413. They take 24–12 AWG wire: solid-core
+        Cat5e/Cat6 (about 24 AWG) fits; very thin stranded patch-cable wire may not clamp well, so use solid-core
+        cable, or put a small ferrule on each end</li>
+      <li>Wire cutters and a wire stripper</li>
       <li>Heat-shrink tubing or electrical tape</li>
       <li>A multimeter with a continuity (beep) setting and an Ohms setting</li>
       <li>A VE.Can terminator: the small RJ45 plug that came in the Cerbo box</li>
-      <li>A 120 Ω resistor (¼ W) for the D1 end. Required: the D1 has no built-in terminator</li>
+      <li>A <b>120 Ω resistor</b>, ¼ W metal film (1 %), for the D1 end. Measure it before use: 115–125 Ω</li>
     </ul>
   </div>
   <div>
@@ -71,57 +70,63 @@ as it does today, on its own built-in logic.</p>
 
 <!-- ======================================================================= 2 -->
 <h2 class="page"><span class="num">2</span>Make the cable</h2>
-<p>The Cerbo uses <b>RJ45 sockets</b>, the same plug as network cables. The easiest way is to take a ready-made network
-cable, keep the plug on one end for the Cerbo, and cut off the other end. You only need <b>3 of its 8 wires</b>: CAN_H and
-CAN_L go into the D1's signal plug, and the CAN ground goes to the common ground.</p>
+<p>The Cerbo uses <b>RJ45 sockets</b>, the same plug as network cables. Take a ready-made network cable, keep the plug
+on one end for the Cerbo, and cut off the other end. You only need <b>2 of its 8 wires</b>: the brown pair. The D1 already
+has labelled wires coming out of its signal plug (CAN_H, CAN_L and its two voltage wires, KL15 and KL30), so you join the network cable to its CAN_H and CAN_L
+wires with <b>two lever wire connectors</b>, and put the <b>120 Ω resistor</b> between the two connectors. <b>No ground wire</b> is needed.</p>
 <h3>The whole connection</h3>
 <img src="../images/wiring-connection.png" style="width:96%">
-<p class="caption">Blue: the network cable you make (CAN), with the required 120 Ω resistor across CAN_H and CAN_L at the D1.
-Green: CAN ground to the D1's common ground. Red: the D1's own 12 V wires (KL30 and KL15). If your D1 already works today,
-the red wires are already in place.</p>
-<h3>Which wire goes where</h3>
+<p class="caption">Blue: the network cable you make. The two lever connectors join it to the D1's CAN_H and CAN_L wires, with
+the required 120 Ω resistor between them. Red: the D1's own 12 V wires (KL30 and KL15). If your D1 already works today, they're already in place.</p>
+<h3>The two lever connectors</h3>
+<img src="../images/wiring-wago.png" style="width:80%">
+<p class="caption">Each connector joins three things: one D1 wire, one network-cable wire and one leg of the resistor.
+The resistor bridges the two connectors, so it sits across CAN_H and CAN_L at the D1.</p>
+<h3 class="page">Which wire goes where</h3>
 <img src="../images/wiring-pins.png" style="width:96%">
-<p class="caption">Pins 7 and 8 are the <b>brown pair</b> (twisted together), which suits CAN well. Pin 3 is <b>white/green</b> on
-most cables (T568B), or <b>white/orange</b> on T568A cables. The multimeter check in step 2b tells you which.</p>
+<p class="caption">Pins 7 and 8 are the <b>brown pair</b> (twisted together), which suits CAN well. Everything else, including
+white/green (pin 3), is not used.</p>
 
-<img class="page" src="../images/wiring-connectors.png" style="width:86%">
+<img src="../images/wiring-connectors.png" style="width:86%">
 <table>
-  <tr><th>Wire</th><th>RJ45 pin (Cerbo)</th><th>Goes to (D1)</th></tr>
-  <tr><td>white/brown</td><td>7</td><td><b>Pin 1 CAN_H</b> on the 6-pin signal connector</td></tr>
-  <tr><td>brown</td><td>8</td><td><b>Pin 2 CAN_L</b> on the 6-pin signal connector</td></tr>
-  <tr><td>white/green (white/orange on T568A)</td><td>3</td><td><b>Common ground</b>: the D1's GND terminal, or the ground
-    bus it's bolted to. The D1's signal connector has no ground pin</td></tr>
-  <tr><td colspan="2">The other 5 wires (pins 1, 2, 4, 5, 6)</td><td>Not used. Cut them short and insulate each one</td></tr>
+  <tr><th>Wire</th><th>RJ45 pin (Cerbo)</th><th>Goes to</th></tr>
+  <tr><td>white/brown</td><td>7</td><td><b>Lever connector A</b>, with the D1's wire labelled <b>CAN_H</b></td></tr>
+  <tr><td>brown</td><td>8</td><td><b>Lever connector B</b>, with the D1's wire labelled <b>CAN_L</b></td></tr>
+  <tr><td>120 Ω resistor</td><td>–</td><td>One leg in connector A, the other in connector B</td></tr>
+  <tr><td colspan="2">The other 6 wires (pins 1–6, including white/green)</td><td>Not used. Cut them short and insulate each one. No ground wire</td></tr>
 </table>
 <p class="caption" style="text-align:left">Sources: Victron's <i>VE.Can to CAN-bus BMS cables manual</i> (Cerbo side: pin 7 CAN-H,
-pin 8 CAN-L, pin 3 GND) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, Rev D (signal connector pinout and fuses).</p>
+pin 8 CAN-L) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, Rev D.</p>
 
 <h3>Make it</h3>
 <div class="step"><div class="id">2a</div><div><b>Cut off one plug.</b> Keep the other plug for the Cerbo. Strip about 5 cm (2 in) of the grey outer jacket.</div></div>
 <div class="step"><div class="id">2b</div><div><b>Check the wires with a multimeter</b> on the continuity (beep) setting. Touch one probe to a gold contact on the plug and the other to a wire:
-  <ul><li>Pin 7 should beep with <b>white/brown</b></li><li>Pin 8 should beep with <b>brown</b></li>
-  <li>Pin 3 should beep with <b>white/green</b>. If it beeps with white/orange instead, use white/orange as the CAN ground</li></ul></div></div>
-<div class="step"><div class="id">2c</div><div><b>Insulate the 5 wires you don't need.</b> Cut them short and cover <b>each one</b> separately with heat-shrink or tape, so none can touch anything.</div></div>
-<div class="step"><div class="id">2d</div><div><b>Add CAN_H and CAN_L to the D1's signal plug.</b> With the D1 switched off, crimp contacts onto
-  <b>white/brown</b> (into <b>pin 1, CAN_H</b>) and <b>brown</b> (into <b>pin 2, CAN_L</b>). Keep the brown pair twisted together as close to the
-  plug as you can. If your D1 is already wired, unplug the existing signal plug and add the two contacts to it.</div></div>
-<div class="step"><div class="id">2e</div><div><b>Connect the CAN ground.</b> Put a ring terminal on the <b>white/green</b> wire and connect it to the
-  <b>common ground</b>: the D1's GND terminal, or the ground bus that terminal is bolted to.</div></div>
-<div class="panel red" style="margin:8pt 0">Never connect any of the network-cable wires to the D1's HV+ or LV+ terminals. CAN_H and CAN_L only go to pins 1 and 2 of the signal plug.</div>
-<div class="step"><div class="id">2f</div><div><b>Check the D1's own 12 V wires (KL30 and KL15).</b> The D1 needs both to work at all, and without them it's also
-  silent on CAN. If your D1 already works today, they're already in place: just check them.
-  <table><tr><th>Pin</th><th>Connect to</th></tr>
-  <tr><td>4 KL30</td><td>A permanent 12 V supply (9–16 V, up to 2 A) through a 3 A fuse close to the 12 V source</td></tr>
-  <tr><td>3 KL15</td><td>A 12 V "enable" signal (8 V or more = on). Link it to KL30 to keep the D1 always enabled, or wire it through a switch, ignition or relay. The manual (Rev D) fuses it at 1 A when it has its own wire</td></tr>
-  <tr><td>5, 6</td><td>Nothing. The manual says "do not connect"</td></tr></table></div></div>
-<div class="step"><div class="id">2g</div><div><b>Fit the 120 Ω resistor at the D1.</b> The D1 has no built-in terminator, so connect a 120 Ω resistor between CAN_H and
-  CAN_L at the D1 end, for example between the white/brown and brown wires where they meet the signal plug. Insulate it with heat-shrink.<br>
-  <b>Check:</b> with the RJ45 plug not yet in the Cerbo, measure between the white/brown and brown wires (or pins 7 and 8 of the RJ45 plug). It should read about <b>120 Ω</b>.</div></div>
+  <ul><li>Pin 7 should beep with <b>white/brown</b></li><li>Pin 8 should beep with <b>brown</b></li></ul></div></div>
+<div class="step"><div class="id">2c</div><div><b>Insulate the 6 wires you don't need</b>, including white/green. Cut them short and cover <b>each one</b> separately with heat-shrink or tape, so none can touch anything.</div></div>
+<div class="step"><div class="id">2d</div><div><b>Join the wires with the two lever connectors</b>, with the D1 switched off.
+  Strip each wire <b>11 mm</b> (the strip gauge on the connector's side), lift the lever, push the wire fully in, and close the lever.
+  <ul><li><b>Connector A (CAN-H):</b> the D1's wire labelled <b>CAN_H</b>, the <b>white/brown</b> wire, and one leg of the resistor</li>
+  <li><b>Connector B (CAN-L):</b> the D1's wire labelled <b>CAN_L</b>, the <b>brown</b> wire, and the other leg of the resistor</li></ul>
+  Slide heat-shrink over both resistor legs so they can't touch each other or anything metal. Keep the brown pair twisted to within a few
+  centimetres of the connectors, and tie the connectors and cable to something solid (or put them in a small box), so vibration can't pull on them.</div></div>
+<div class="step"><div class="id">2e</div><div><b>No ground wire.</b> CAN works on the difference between CAN_H and CAN_L. The Cerbo and the D1 already share
+  the van's negative through their power wiring, so a separate CAN ground isn't needed. Leaving it off also avoids a thin wire running in
+  parallel with the main negative cables (the Cerbo's VE.Can 2 port is not isolated). Once everything runs, step 5c includes a quick
+  check of the ground difference.</div></div>
+<div class="panel red" style="margin:8pt 0">Never connect any of the network-cable wires to the D1's HV+ or LV+ terminals. They only join the D1's labelled CAN_H and CAN_L wires.</div>
+<div class="step"><div class="id">2f</div><div><b>Check the D1's two voltage wires (KL30 and KL15).</b> The D1 needs both to work at all, and without them it's also
+  silent on CAN. If your D1 already works today, they're already in place: just check them. On the Grand Design LTV1 both
+  are joined to one always-on, fused 12 V wire, which keeps the D1 always enabled.
+  <table><tr><th>Wire</th><th>Connect to</th></tr>
+  <tr><td>KL30</td><td>A permanent 12 V supply (9–16 V, up to 2 A) through a 3 A fuse close to the 12 V source</td></tr>
+  <tr><td>KL15</td><td>A 12 V "enable" signal (8 V or more = on). Link it to KL30 to keep the D1 always enabled, or wire it through a switch, ignition or relay. The manual (Rev D) fuses it at 1 A when it has its own wire</td></tr></table></div></div>
+<div class="step"><div class="id">2g</div><div><b>Check the resistor.</b> With the RJ45 plug not yet in the Cerbo, measure between pins 7 and 8 of the
+  RJ45 plug (or the white/brown and brown wires). It should read about <b>120 Ω</b>. If it reads open, a wire isn't fully in its lever connector.</div></div>
 <div class="step"><div class="id">2h</div><div><b>Final check:</b> plug the RJ45 into the Cerbo port you'll use, with the VE.Can terminator in that port's other socket. With everything switched off, measure between white/brown and brown again:
   <table><tr><th>You measure</th><th>Meaning</th></tr>
   <tr><td>About 60 Ω</td><td>Correct: both ends are terminated</td></tr>
   <tr><td>About 120 Ω</td><td>The VE.Can terminator isn't in the Cerbo port's other socket, or the cable is in a different port</td></tr>
-  <tr><td>Very high or "OL"</td><td>The resistor at the D1 isn't connected. Re-check step 2g</td></tr></table></div></div>
+  <tr><td>Very high or "OL"</td><td>The resistor at the D1 isn't connected, or a wire isn't fully in its lever connector. Re-check steps 2d and 2g</td></tr></table></div></div>
 
 <!-- ======================================================================= 3 + 4 -->
 <h2 class="page"><span class="num">3</span>Set up the Cerbo</h2>
@@ -182,6 +187,7 @@ Listening 3 s on each CAN port (nothing is transmitted)...
 Something is talking on can1 at a different speed. On the Cerbo, set that port's CAN-bus
 profile to "CAN-bus BMS LV (500 kbit/s)" and run this again.</pre>
 <p>Do what it says (step 3c), then type <code>2</code> again. If nothing is heard at all, see Troubleshooting, and check the KL30/KL15 supply first.</p>
+<div class="panel blue" style="margin:6pt 0"><b>Ground check (no CAN ground wire).</b> Later, with the D1 working hard, measure between the Cerbo's negative terminal and the D1's GND terminal. A few tenths of a volt is normal. More than about 1 V points to a poor negative connection: fix that first. If the Cerbo ever can't hear the D1 although the wiring and the 60 Ω check are right, try a wire from RJ45 pin 3 (white/green) to the D1's GND as a test.</div>
 <div class="step"><div class="id">5d</div><div><b>Type <code>1</code>: edit the settings.</b> Notepad opens <code>config.ini</code>. Check these lines, then press Ctrl+S to save and close Notepad:
   <table><tr><th>Line</th><th>What to put</th></tr>
   <tr><td><code>interface = auto</code></td><td>Leave as auto: the driver finds the D1's CAN port by itself</td></tr>
@@ -260,7 +266,7 @@ until it falls below 12.3 V. In between it waits in <b>Standby</b>, with no curr
 <h2><span class="num">?</span>Troubleshooting</h2>
 <table>
   <tr><th style="width:36%">What you see</th><th>What to do</th></tr>
-  <tr><td>Option 2: "not heard on any port"</td><td>Check, in this order: (1) the D1 has KL30 (pin 4, 9–16 V) and KL15 (pin 3, 8 V or more), measured to GND. Without both, its controller is off and silent; (2) the CAN speed: if it reports bus errors, switch to the other speed (step 3c); (3) the wires (2b), and that CAN_H/CAN_L are in pins 1/2 of the D1 plug; (4) the termination reads about 60 Ω (2h); (5) the cable is in the Cerbo port you set up.</td></tr>
+  <tr><td>Option 2: "not heard on any port"</td><td>Check, in this order: (1) the D1 has KL30 (pin 4, 9–16 V) and KL15 (pin 3, 8 V or more), measured to GND. Without both, its controller is off and silent; (2) the CAN speed: if it reports bus errors, switch to the other speed (step 3c); (3) the wires (2b), and that each lever connector holds the right D1 wire (CAN_H with white/brown, CAN_L with brown); (4) the termination reads about 60 Ω (2h); (5) the cable is in the Cerbo port you set up.</td></tr>
   <tr><td>"ssh" or "tar" is not recognized</td><td>Install the Windows OpenSSH client: Settings › Apps › Optional features › Add a feature › OpenSSH Client.</td></tr>
   <tr><td>"Connection timed out" or "Connection refused"</td><td>Check the IP address (menu option 6), that the PC and Cerbo are on the same network, and that Enable SSH on LAN is on (step 3d).</td></tr>
   <tr><td>"Permission denied"</td><td>Wrong root password. Set it again (step 3d, item 3).</td></tr>
