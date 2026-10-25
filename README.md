@@ -80,6 +80,7 @@ New to all this? **[How it works, in plain English](docs/how-it-works.md)** expl
 | **Victron device** | A Cerbo GX (or another Victron GX device) running **Venus OS v3.80 or newer** |
 | **Cable** | A normal network (Ethernet) patch cable, which you adapt. The [Installation Guide](docs/installation-guide.pdf) shows how |
 | **Terminators** | A 120 Ω resistor at the D1 end, plus the Victron terminator plug that comes with the Cerbo |
+| **Connectors** | Two 3-way lever wire connectors (for example WAGO 221-413) |
 | **A computer** | Windows, for the [`Cerbo Setup.bat`](Cerbo%20Setup.bat) helper. On Mac or Linux, use the commands in the [driver reference](dbus-nomadic-dcdc/README.md) |
 
 You don't need to install anything on the Cerbo yourself, and you don't need programming knowledge:
@@ -108,7 +109,8 @@ inside the unzipped folder. On Mac or Linux, type `python3` instead of `python`.
 
 Follow the **[Installation Guide (PDF)](docs/installation-guide.pdf)**. It has pictures for every step. In short:
 
-1. **Make the cable.** Cut one end off a network cable and connect three of its wires to the D1.
+1. **Make the cable.** Cut one end off a network cable and join its brown pair to the D1's labelled CAN_H and
+   CAN_L wires with two lever wire connectors, with a 120 Ω resistor between them. No ground wire.
 2. **Set up the Cerbo.** Check the firmware version, choose the CAN port and its speed, and allow your PC to connect.
 3. **Connect everything.**
 4. **Run [`Cerbo Setup.bat`](Cerbo%20Setup.bat)** on your Windows PC. It finds the converter, lets you edit the

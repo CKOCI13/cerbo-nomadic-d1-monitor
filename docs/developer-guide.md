@@ -264,8 +264,9 @@ npm install playwright        # once
 node docs/src/build.cjs       # all of it; or add: figures | web | pdf
 ```
 
-The older explainer pictures (`explained-overview`, `-today`, `-after`, `-cable`, `-automatic`) and the three
-`wiring-*.png` diagrams (cut from the version 1 guide at 300 dpi) are kept as files; they didn't change. The Cerbo
+The older explainer pictures (`explained-overview`, `-today`, `-after`, `-automatic`) are kept as files. The wiring
+pictures (`wiring-*.png`, `explained-cable.png`) come from [`docs/src/wiring.html`](src/wiring.html), the same file in
+all four repositories apart from `data-model` (D1 or D2): rebuild them with `node docs/src/build-wiring.cjs`. The Cerbo
 and VRM pictures are drawings in Victron's style, not screenshots.
 
 ## Finding the CAN port (`interface = auto`)

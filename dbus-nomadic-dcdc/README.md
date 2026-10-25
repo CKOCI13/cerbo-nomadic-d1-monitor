@@ -26,28 +26,33 @@ You can see it on:
 
 ## 1. Wiring
 
-| D1 signal connector (TE 1-967616-1) | Connect to |
+| D1 wire (labelled, from its signal plug) | Connect to |
 |---|---|
-| Pin 1 CAN_H | GX RJ45 **pin 7** |
-| Pin 2 CAN_L | GX RJ45 **pin 8** |
-| Pin 3 KL15 (enable) | 12 V enable, ≥ 8 V = on: switched (ignition, relay) or linked to KL30 |
-| Pin 4 KL30 | Permanent **fused** 12 V (9–16 V, up to 2 A) |
-| Pins 5, 6 | Not connected |
-| (M8 GND terminal) | GX RJ45 **pin 3** (CAN ground) goes to this common ground |
+| CAN_H | GX RJ45 **pin 7** (white/brown), in lever connector A with one resistor leg |
+| CAN_L | GX RJ45 **pin 8** (brown), in lever connector B with the other resistor leg |
+| KL15 (enable) | 12 V enable, ≥ 8 V = on: switched (ignition, relay) or linked to KL30 |
+| KL30 | Permanent **fused** 12 V (9–16 V, up to 2 A) |
+| (no CAN ground) | RJ45 pin 3 (white/green) is not used |
+
+![The two lever connectors and the resistor](../docs/images/wiring-wago.png)
 
 * **The D1 needs KL30 and KL15** (manual Rev D). Without them its controller is off, and it neither converts
   nor talks on CAN.
-* The D1's signal connector has no CAN ground pin. Its CAN is referenced to its common GND (the M8 terminal,
-  shared by both batteries), so take the GX's CAN GND (RJ45 pin 3) to that common ground.
-* Victron RJ45 pinout: **pin 7 CAN-H, pin 8 CAN-L, pin 3 GND** (Victron's VE.Can to CAN-bus BMS cable manual).
-  Leave the other pins unconnected.
+* **No CAN ground wire.** CAN is differential, and the GX and the D1 already share the system negative through
+  their power wiring. The GX's VE.Can 2 port is not isolated, so a thin CAN-ground wire would run in parallel with
+  the main negative cables. Leave RJ45 pin 3 unconnected. Check once with the D1 working hard: Cerbo negative to
+  D1 GND should be a few tenths of a volt; over about 1 V means a poor negative connection.
+* **Joining:** two 3-way lever connectors (e.g. WAGO 221-413, 24–12 AWG; strip 11 mm). A: D1 CAN_H + white/brown +
+  resistor leg. B: D1 CAN_L + brown + other resistor leg. Insulate the resistor legs.
+* Victron RJ45 pinout: **pin 7 CAN-H, pin 8 CAN-L** (Victron's VE.Can to CAN-bus BMS cable manual). Leave the
+  other pins unconnected.
 * The bus needs exactly **two 120 Ω terminators**: a VE.Can terminator in the GX port's second socket, and
   a **120 Ω resistor between CAN_H and CAN_L at the D1** (the D1 has no built-in terminator). With everything
   connected and off, CAN-H to CAN-L should measure about 60 Ω.
 * Use a port that has nothing else on it, normally the Cerbo's **second CAN port** (usually `can1`; `--scan`,
   below, lists the real names and shows which one the converter is on):
   * **Cerbo GX MK2** (ports labeled VE.Can 1 and VE.Can 2): use **VE.Can 2**. It is not isolated: its CAN GND
-    is the Cerbo's own negative, which is one more reason to take RJ45 pin 3 to the common ground.
+    is the Cerbo's own negative, which is why no separate CAN ground wire is run.
   * **Original Cerbo GX** (second port labeled BMS-Can): BMS-Can only runs at **500 kbit/s** (see section 2).
 
 ## 2. Bitrate and port profile
