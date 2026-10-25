@@ -5,6 +5,13 @@ What changed in each version of the driver (`VERSION` in `dbus-nomadic-dcdc/dbus
 This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3.0 (with control) were developed
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
+## 2.1.1 (2026-10-25)
+
+- **CAN port profile you can actually choose:** the guide said to set the converter's port to *Up, but no services*. Victron's current screen software (gui-v2, Venus OS v3.80+) hides that option and won't let you pick it. The guide, the driver reference and the `--scan` advice now say **VE.Can (250 kbit/s)** or **CAN-bus BMS LV (500 kbit/s)**; the driver reference shows how to set *Up, but no services* over SSH if you want it.
+- **Start-up script fix (USB stick and normal installs):** Venus OS only runs `/data/rc.local` when it is executable, and when another add-on ends that file with `exit 0`, a line added after it never runs. `install.sh` now puts its line before the first top-level `exit`, moves it there if an older version left it after one, and always makes the file executable. New tests cover it, and the USB file was checked against Victron's own `update-data.sh`.
+- **USB file names:** the README and guide now warn that a browser-renamed file such as `... (1).tar.gz` is skipped by the Cerbo (names with spaces don't work) and must be renamed back.
+- **D1 manual Rev D:** references updated from Rev C. The guide now gives Rev D's fuses: 3 A for KL30 and 1 A for KL15.
+
 ## 2.1.0 (2026-10-17): test release
 
 - **Finds its CAN port by itself:** `interface = auto` is the new default. The driver listens on every CAN

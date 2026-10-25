@@ -134,7 +134,8 @@ access level.
    including `interface = auto`, so the monitor finds the D1's CAN port by itself on any Cerbo.
    (On a Mac, download with Chrome or Firefox: Safari can unpack it into a `.tar` file, which the Cerbo ignores.)
 2. **Copy it** to the top folder of a USB stick or SD card (FAT32 is the safe choice), not inside another folder.
-   Put only **one** `venus-data` file on the stick.
+   Put only **one** `venus-data` file on the stick, and check its name: if your browser saved it as
+   `venus-data-nomadic-d1-monitor (1).tar.gz`, rename it back to `venus-data-nomadic-d1-monitor.tar.gz`. The Cerbo skips names with spaces.
 3. **Check one setting:** *Settings › General › Modification checks*: modifications must be enabled (the default).
    When they're off, Venus OS switches off the start-up script and the monitor disappears after a restart.
 4. **Put the stick in the Cerbo and restart it** (Settings › General › Reboot, or switch it off and on).

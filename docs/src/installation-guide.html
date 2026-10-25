@@ -94,7 +94,7 @@ most cables (T568B), or <b>white/orange</b> on T568A cables. The multimeter chec
   <tr><td colspan="2">The other 5 wires (pins 1, 2, 4, 5, 6)</td><td>Not used. Cut them short and insulate each one</td></tr>
 </table>
 <p class="caption" style="text-align:left">Sources: Victron's <i>VE.Can to CAN-bus BMS cables manual</i> (Cerbo side: pin 7 CAN-H,
-pin 8 CAN-L, pin 3 GND) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, Rev C (signal connector pinout).</p>
+pin 8 CAN-L, pin 3 GND) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, Rev D (signal connector pinout and fuses).</p>
 
 <h3>Make it</h3>
 <div class="step"><div class="id">2a</div><div><b>Cut off one plug.</b> Keep the other plug for the Cerbo. Strip about 5 cm (2 in) of the grey outer jacket.</div></div>
@@ -112,7 +112,7 @@ pin 8 CAN-L, pin 3 GND) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, 
   silent on CAN. If your D1 already works today, they're already in place: just check them.
   <table><tr><th>Pin</th><th>Connect to</th></tr>
   <tr><td>4 KL30</td><td>A permanent 12 V supply (9–16 V, up to 2 A) through a 3 A fuse close to the 12 V source</td></tr>
-  <tr><td>3 KL15</td><td>A 12 V "enable" signal (8 V or more = on). Link it to KL30 to keep the D1 always enabled, or wire it through a switch, ignition or relay</td></tr>
+  <tr><td>3 KL15</td><td>A 12 V "enable" signal (8 V or more = on). Link it to KL30 to keep the D1 always enabled, or wire it through a switch, ignition or relay. The manual (Rev D) fuses it at 1 A when it has its own wire</td></tr>
   <tr><td>5, 6</td><td>Nothing. The manual says "do not connect"</td></tr></table></div></div>
 <div class="step"><div class="id">2g</div><div><b>Fit the 120 Ω resistor at the D1.</b> The D1 has no built-in terminator, so connect a 120 Ω resistor between CAN_H and
   CAN_L at the D1 end, for example between the white/brown and brown wires where they meet the signal plug. Insulate it with heat-shrink.<br>
@@ -129,8 +129,8 @@ pin 8 CAN-L, pin 3 GND) and the <i>D1 Bidirectional DC-DC Converter Manual</i>, 
 <div class="step"><div class="id">3a</div><div><b>Check the firmware version.</b> Go to <b>Settings › General › Firmware</b>. It needs to be <b>v3.80 or newer</b>. If it's older, use <b>Online updates</b> on the same page to update first.<br>Then go to <b>Settings › General › Modification checks</b> and make sure <b>modifications are enabled</b> (that's the default). If they are off, Venus OS switches off the start-up script and the driver disappears after the next restart.</div></div>
 <div class="step"><div class="id">3b</div><div><b>Write down the Cerbo's IP address.</b> Go to <b>Settings › Connectivity › Ethernet</b> (or Wi-Fi) and read the IP address.<br>IP address: <span class="write"></span></div></div>
 <div class="step"><div class="id">3c</div><div><b>Choose the CAN port and speed.</b> Use the Cerbo's second CAN port, with nothing else plugged into it. The labels next to the ports tell you which Cerbo you have:
-  <ul><li><b>Cerbo GX MK2</b> (ports labeled <b>VE.Can 1</b> and <b>VE.Can 2</b>): go to <b>Settings › Connectivity › VE.Can port 2</b> (some firmware still calls it <b>BMS-Can port</b>) and set <b>CAN-bus profile</b> to <b>Up, but no services (250 kbit/s)</b>. The D1 talks at either 250 or 500 kbit/s. Start with 250. Step 5c shows each port's speed, and tells you if the D1 is talking at the other speed. Then change the profile to <b>Up, but no services (500 kbit/s)</b>.</li>
-  <li><b>Original Cerbo GX</b> (second port labeled <b>BMS-Can</b>): go to <b>Settings › Connectivity › BMS-Can port</b>. This port only runs at 500 kbit/s and can't be set to "Up, but no services", so leave it on <b>CAN-bus BMS (500 kbit/s)</b>. It works only if the D1 talks at 500 kbit/s. If step 5c reports bus errors on it, the D1 is at 250 kbit/s: use the VE.Can port (if nothing else is on it) with <b>Up, but no services (250 kbit/s)</b> instead.</li></ul></div></div>
+  <ul><li><b>Cerbo GX MK2</b> (ports labeled <b>VE.Can 1</b> and <b>VE.Can 2</b>): go to <b>Settings › Connectivity › VE.Can port 2</b> (some firmware still calls it <b>BMS-Can port</b>) and set <b>CAN-bus profile</b> to <b>VE.Can (250 kbit/s)</b> (the default). The D1 talks at either 250 or 500 kbit/s. Start with 250. Step 5c shows each port's speed, and tells you if the D1 is talking at the other speed. Then change the profile to <b>CAN-bus BMS LV (500 kbit/s)</b> (older firmware: <b>CAN-bus BMS (500 kbit/s)</b>).<br><small>Victron's own messages on that port use a different kind of CAN ID (29-bit) from the D1's (11-bit), so they don't get in each other's way. You may see the profile <i>Up, but no services</i> mentioned elsewhere: the Cerbo screen no longer lets you choose it, and it isn't needed.</small></li>
+  <li><b>Original Cerbo GX</b> (second port labeled <b>BMS-Can</b>): go to <b>Settings › Connectivity › BMS-Can port</b>. This port only runs at 500 kbit/s, so leave it on <b>CAN-bus BMS (500 kbit/s)</b>. It works only if the D1 talks at 500 kbit/s. If step 5c reports bus errors on it, the D1 is at 250 kbit/s: use the VE.Can port (if nothing else is on it) with <b>VE.Can (250 kbit/s)</b> instead.</li></ul></div></div>
 <div class="step"><div class="id">3d</div><div><b>Let your PC connect to the Cerbo</b> (this switches on SSH):
   <ol><li>Go to <b>Settings › General › Access &amp; Security › Access level</b> and choose <b>User &amp; Installer</b>. The password is <code>ZZZ</code>.</li>
   <li>Still on the Access &amp; Security page, drag the list down with your finger and hold it for about 5 seconds (on Remote Console with a keyboard: hold the right-arrow key). The access level changes to <b>Superuser</b>.</li>
@@ -180,7 +180,7 @@ Listening 3 s on each CAN port (nothing is transmitted)...
 <p>Port names differ between Cerbo models (<code>can1</code>, or <code>vecan1</code> on the MK2). That's fine: with <code>interface = auto</code> the driver uses whichever port the D1 is on. If the D1 is set to the other speed, you'll see bus errors instead:</p>
 <pre>  can1    250 kbit/s  error-passive nothing decoded, but 288 bus errors: talking at a different speed?
 Something is talking on can1 at a different speed. On the Cerbo, set that port's CAN-bus
-profile to "Up, but no services (500 kbit/s)" and run this again.</pre>
+profile to "CAN-bus BMS LV (500 kbit/s)" and run this again.</pre>
 <p>Do what it says (step 3c), then type <code>2</code> again. If nothing is heard at all, see Troubleshooting, and check the KL30/KL15 supply first.</p>
 <div class="step"><div class="id">5d</div><div><b>Type <code>1</code>: edit the settings.</b> Notepad opens <code>config.ini</code>. Check these lines, then press Ctrl+S to save and close Notepad:
   <table><tr><th>Line</th><th>What to put</th></tr>
@@ -196,13 +196,13 @@ Alarms: none
 Software 1.2.3  Hardware 5</pre>
 <div class="step"><div class="id">5f</div><div><b>Type <code>4</code>: install.</b> After about 10 seconds you should see:</div></div>
 <pre>/service/dbus-nomadic-dcdc: up (pid 1834) 6 seconds
-... INFO: Nomadic DC-DC monitor 2.1.0 starting on auto (monitor only: nothing is transmitted)
+... INFO: Nomadic DC-DC monitor 2.1.1 starting on auto (monitor only: nothing is transmitted)
 ... INFO: Converter online on can1</pre>
 <p><b>Done!</b> It now starts by itself after every reboot and firmware update.</p>
 <h3>No network to the Cerbo? Install from a USB stick instead</h3>
 <p>Venus OS can install add-ons from a USB stick or microSD card by itself, with no SSH or password. Do this instead of 5c–5f:</p>
 <div class="step"><div class="id">U1</div><div><b>Get the file.</b> Download <code>venus-data-nomadic-d1-monitor.tar.gz</code> from the latest release (<a href="https://github.com/CKOCI13/cerbo-nomadic-d1-monitor/releases/latest">https://github.com/CKOCI13/cerbo-nomadic-d1-monitor/releases/latest</a>). It has the standard settings, with <code>interface = auto</code>, so there's nothing to edit. To change settings first, edit config.ini (Cerbo Setup option <code>1</code>) and type <code>U</code> to make your own copy of the file. On a Mac, download it with Chrome or Firefox: Safari can unpack it into a <code>.tar</code> file, which the Cerbo ignores.</div></div>
-<div class="step"><div class="id">U2</div><div>Copy it to the <b>top folder</b> of a USB stick or SD card (FAT32), not inside another folder. Put only <b>one</b> <code>venus-data</code> file on the stick.</div></div>
+<div class="step"><div class="id">U2</div><div>Copy it to the <b>top folder</b> of a USB stick or SD card (FAT32), not inside another folder. Put only <b>one</b> <code>venus-data</code> file on the stick. If your browser saved it as <code>venus-data-nomadic-d1-monitor (1).tar.gz</code>, rename it back to <code>venus-data-nomadic-d1-monitor.tar.gz</code>: the Cerbo skips names with spaces.</div></div>
 <div class="step"><div class="id">U3</div><div>Put the stick in the Cerbo and restart it (<b>Settings › General › Reboot</b>, or switch it off and on).
   The Cerbo unpacks the file and installs the monitor while it starts.</div></div>
 <div class="step"><div class="id">U4</div><div><b>Wait about 2 minutes, then take the stick out.</b> The Cerbo renames the file on the stick to <code>...tar.gz.installed</code>, so it never installs twice.
