@@ -24,6 +24,7 @@ automatically on every change; the result is the "tests" badge at the top of the
 | [`test_dbus.py`](test_dbus.py) | Everything shown on the Cerbo and in VRM meets the display rules in Victron's GUI source code. Nothing is writable except display settings. The three cards, readings and power, alarms, "No communication", renaming that survives a restart, turning the switch pane off |
 | [`test_scan.py`](test_scan.py) | "Find the converter" finds the right port, spots a wrong bitrate from bus errors, warns about old firmware, and works without `iproute2` |
 | [`test_usb_installer.py`](test_usb_installer.py) | The USB-stick installer unpacks to `/data/dbus-nomadic-dcdc`, leaves out run-time files, and its hook runs `install.sh` only after a good unpack (needs `sh` and `tar`, so it is skipped on plain Windows) |
+| [`test_install_script.py`](test_install_script.py) | `install.sh` adds itself to `/data/rc.local` once, before any top-level `exit` another add-on left there, and leaves the file executable, as Venus OS needs (needs `sh` and `awk`) |
 | [`test_simulation.py`](test_simulation.py) | The pretend D1 follows the manual's automatic logic (buck, standby, boost). The whole monitor runs end to end against it |
 
 ## How they run without a Cerbo

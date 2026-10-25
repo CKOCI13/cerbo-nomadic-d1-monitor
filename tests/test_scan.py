@@ -74,7 +74,7 @@ class ScanTest(unittest.TestCase):
         self.scenario['can1'] = 'wrong-speed'
         out = self.scan('can1')
         self.assertIn('bus errors', out)
-        self.assertIn('Up, but no services (500 kbit/s)', out)
+        self.assertIn('CAN-bus BMS LV (500 kbit/s)', out)
 
     def test_warns_about_old_firmware_and_missing_converter(self):
         with open(self.version_file, 'w') as f:

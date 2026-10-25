@@ -134,7 +134,8 @@ access level.
    including `interface = auto`, so the monitor finds the D1's CAN port by itself on any Cerbo.
    (On a Mac, download with Chrome or Firefox: Safari can unpack it into a `.tar` file, which the Cerbo ignores.)
 2. **Copy it** to the top folder of a USB stick or SD card (FAT32 is the safe choice), not inside another folder.
-   Put only **one** `venus-data` file on the stick.
+   Put only **one** `venus-data` file on the stick, and check its name: if your browser saved it as
+   `venus-data-nomadic-d1-monitor (1).tar.gz`, rename it back to `venus-data-nomadic-d1-monitor.tar.gz`. The Cerbo skips names with spaces.
 3. **Check one setting:** *Settings › General › Modification checks*: modifications must be enabled (the default).
    When they're off, Venus OS switches off the start-up script and the monitor disappears after a restart.
 4. **Put the stick in the Cerbo and restart it** (Settings › General › Reboot, or switch it off and on).
@@ -260,6 +261,11 @@ It can show you the problem: the web page charts the current on each side, so yo
 when. It can't limit it, because it never sends the D1 anything. The **[control edition](https://github.com/CKOCI13/cerbo-nomadic-d1#limiting-current-to-protect-fuses-and-wiring)**
 (for advanced users) can hold the D1 to a lower current, with important limits explained there. The lasting fix is
 a fuse and cable sized for the D1's maximum currents, or asking Nomadic to lower the D1's own current limit.
+
+**I have a stock Grand Design LTV1. Is this edition enough?**
+Not to protect the wiring. The LTV1's 12 V cable is 2 AWG on a 150 A fuse, and the D1 can draw more than that from
+the 12 V side (up to about 200 A when boosting). This edition only shows the current. The control edition ships
+with limits set for the LTV1 (120 A buck, 23 A boost), which apply while the Cerbo commands Buck or Boost.
 
 **Can I control the D1 from the Cerbo, then?**
 Not with this one. The control edition, [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), can; it's meant for advanced users. Control was left out here until it's

@@ -35,7 +35,7 @@ You can see it on:
 | Pins 5, 6 | Not connected |
 | (M8 GND terminal) | GX RJ45 **pin 3** (CAN ground) goes to this common ground |
 
-* **The D1 needs KL30 and KL15** (manual Rev C). Without them its controller is off, and it neither converts
+* **The D1 needs KL30 and KL15** (manual Rev D). Without them its controller is off, and it neither converts
   nor talks on CAN.
 * The D1's signal connector has no CAN ground pin. Its CAN is referenced to its common GND (the M8 terminal,
   shared by both batteries), so take the GX's CAN GND (RJ45 pin 3) to that common ground.
@@ -53,12 +53,23 @@ You can see it on:
 ## 2. Bitrate and port profile
 
 The D1 talks at either 250 or 500 kbit/s, and the GX port must match it. On the GX, go to
-**Settings → Connectivity → (your CAN port) → CAN-bus profile** and choose **"Up, but no services (250 kbit/s)"**.
+**Settings → Connectivity → (your CAN port) → CAN-bus profile** and choose **"VE.Can (250 kbit/s)"** (the default).
 If `--scan` reports bus errors but no frames, the D1 is at the other speed: switch to
-"Up, but no services (500 kbit/s)".
+**"CAN-bus BMS LV (500 kbit/s)"** (called "CAN-bus BMS (500 kbit/s)" on older firmware).
+
+Victron's own services on the port use 29-bit (extended) CAN IDs; the D1 uses 11-bit (standard) IDs, and the
+driver only listens for those, so they share the port without trouble.
+
+**"Up, but no services"** (250 or 500 kbit/s) would bring the port up with no Victron services at all, but the
+Cerbo screen (gui-v2, Venus OS v3.80+) hides it and won't let you choose it. If you want it anyway, set it over
+SSH, using the port name from `--scan` (for example `vecan1` or `can1`); 5 = 250 kbit/s, 8 = 500 kbit/s:
+
+```sh
+dbus -y com.victronenergy.settings /Settings/Canbus/vecan1/Profile SetValue 5
+```
 
 On a Cerbo GX MK2 the second port's menu is **VE.Can port 2** (some firmware still calls it BMS-Can port).
-On an **original Cerbo GX**, the BMS-Can port can't be set to "Up, but no services": its only choices are
+On an **original Cerbo GX**, the BMS-Can port is fixed: its only choices are
 **CAN-bus BMS (500 kbit/s)** and disabled. Leave it on CAN-bus BMS (500 kbit/s). It works only if the D1 talks
 at 500 kbit/s; if `--scan` reports bus errors there, the D1 is at 250 kbit/s, so use the VE.Can port instead.
 
@@ -206,7 +217,7 @@ Version 1 ([cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1)) can 
 was in Off, Buck or Boost, its command frames stop when it's replaced, and it isn't known whether the D1 then goes
 back to its own logic. So first set version 1 to **Automatic** (it then sends nothing), check the D1 behaves as it
 does on its own, and only then install version 2. If the D1 ever seems stuck, switching KL15 off and on restarts its
-controller. The old `state.json` is no longer used and can be deleted.
+controller (if KL15 is joined to KL30, as on the LTV1, pull that wire's fuse for a few seconds). The old `state.json` is no longer used and can be deleted.
 
 ## Points to confirm with Nomadic
 
