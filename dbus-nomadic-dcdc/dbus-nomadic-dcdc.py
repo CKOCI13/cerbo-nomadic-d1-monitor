@@ -40,7 +40,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.1.1'
+VERSION = '2.1.2'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -289,6 +289,9 @@ class CanBus:
 
 AUTO = 'auto'
 AUTO_MIN_FRAMES = 5   # frames with the converter's IDs needed to accept a port (it sends ~130 a second)
+# A port is only accepted once 8-byte frames of both of these have been heard on it, so a stray frame
+# that happens to use one of the converter's IDs on another bus isn't mistaken for the converter.
+AUTO_REQUIRED_IDS = (nc.ID_PARAMETER, nc.ID_ELECTRIC)
 
 
 def can_ports():
@@ -302,20 +305,22 @@ def can_ports():
 
 def find_converter(seconds=1.0):
     """Listen (transmitting nothing) on each CAN port for up to `seconds` and return the first port
-    the converter is heard on, or None. Only standard-ID frames with the converter's IDs count."""
+    the converter is heard on, or None. Only 8-byte standard-ID frames with the converter's IDs
+    count, and both its status (0x066) and its readings (0x088) must be among them."""
     for name in can_ports():
         try:
             bus = CanBus(name)
         except OSError:
             continue
-        heard = 0
+        heard, ids = 0, set()
         try:
             end = time.monotonic() + seconds
             while time.monotonic() < end:
                 frame = bus.recv()
-                if frame and frame[0] in nc.RX_IDS:
+                if frame and frame[0] in nc.RX_IDS and len(frame[1]) == 8:
                     heard += 1
-                    if heard >= AUTO_MIN_FRAMES:
+                    ids.add(frame[0])
+                    if heard >= AUTO_MIN_FRAMES and ids.issuperset(AUTO_REQUIRED_IDS):
                         return name
         except OSError:
             pass

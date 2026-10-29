@@ -275,7 +275,9 @@ Port names differ between Cerbo models (`can0`/`can1` on the original, `vecan0`/
 USB-stick install can't run `--scan`, so the default is `interface = auto`. `AutoCanBus` wraps `CanBus`: its first
 `recv()` (in the rx thread) calls `find_converter()` repeatedly, which opens a filtered, listen-only socket on each
 CAN interface in `/sys/class/net` for one second and accepts the first port with at least `AUTO_MIN_FRAMES`
-standard-ID frames carrying the converter's IDs (other traffic, such as a battery BMS on 0x35x, doesn't count).
+8-byte standard-ID frames carrying the converter's IDs, including both 0x066 and 0x088 (`AUTO_REQUIRED_IDS`).
+Other traffic, such as a battery BMS on 0x35x, doesn't count, and neither does a stray frame on another bus that
+happens to use one of the converter's IDs.
 It then binds that port for good, writes it into `cfg['can']['interface']` (so the web page and `/Mgmt/Connection`
 show it) and logs it. The D-Bus service is `nomadic_auto`. The monitor's `AutoCanBus` has no `send()` at all.
 
