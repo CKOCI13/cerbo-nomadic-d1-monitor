@@ -5,6 +5,10 @@ What changed in each version of the driver (`VERSION` in `dbus-nomadic-dcdc/dbus
 This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3.0 (with control) were developed
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
+## 2.1.2 (2026-10-29)
+
+- **Stricter automatic port detection.** `interface = auto` now only accepts a CAN port once it has heard 8-byte frames of both the converter's status (0x066) and readings (0x088), so a stray frame on another bus that happens to use one of those IDs isn't mistaken for the converter. (The monitor still never transmits anything.)
+
 ## Documentation update 2 (2026-10-25, driver unchanged)
 
 - **Plain-language pass** for the README, Installation Guide and Safe Test Plan: long sentences split up, the troubleshooting checklist made into a numbered list, and new glossary entries (lever connector, current limit, Automatic with limits).
