@@ -123,6 +123,7 @@ Edit `config.ini`:
   `--scan` reported. Names differ between models: `can0`/`can1`, or `vecan0`/`vecan1` on the Cerbo GX MK2
 * `custom_name`: the name on the GX and in VRM (default "DC-DC D1")
 * `password`: optional, for the web page
+* `temperature_unit`: `auto` (the Cerbo's own setting), `fahrenheit` or `celsius`, for the web page
 * `switch_pane = no` if you don't want the cards on the GX screen and in VRM
 
 ## 7. Install as a service
@@ -156,7 +157,7 @@ Three cards appear. All items are read-only.
 |---|---|---|
 | **DC-DC D1** | Alarm | The most serious active alarm, or None. The tile turns red ("Fault") on a fault, and "N active" appears when there are several |
 | | Status | The converter's operating mode (Standby, Autonomous, Buck, Boost, Derating…), or "No communication" |
-| | Temperature | Power board temperature, in your GX temperature unit |
+| | Temperature | Power board temperature, in your GX temperature unit (°F or °C, see below) |
 | | Precharge status *(hidden)* | In progress / Not active. Hidden because the D1 manual doesn't use precharge; show it from the device page |
 | **DC-DC D1 12 V side** | Current, Power, Voltage | LV side. Power = V × A |
 | **DC-DC D1 48 V side** | Current, Power, Voltage | HV side |
@@ -179,6 +180,8 @@ API: `GET /api/status` (live values) and `GET /api/history?minutes=60` (one poin
 `time, lv_voltage, lv_current, lv_power, hv_voltage, hv_current, hv_power, temperature`). The history is kept in
 memory and starts again when the monitor restarts.
 
+**Fahrenheit or Celsius:** the Cerbo screen, VRM and the web page all show the temperature in the unit set on the Cerbo, at **Settings → General → Display & Appearance → Data units → Temperature**. Choose **Fahrenheit** there for °F. `temperature_unit` in the `[web]` part of `config.ini` can force the web page to `fahrenheit` or `celsius` instead; on a PC (`--simulate` or `--no-dbus`) the page shows °F.
+
 ### As a DC-DC converter in the device list
 
 The monitor also registers as a standard DC-DC converter named `custom_name` (default "DC-DC D1"). Output
@@ -198,7 +201,7 @@ Every value path is read-only.
 |---|---|
 | `/Dc/0/Voltage`, `/Dc/0/Current`, `/Dc/0/Power` | LV side (V, A, W) |
 | `/Dc/In/V`, `/Dc/In/I`, `/Dc/In/P` | HV side (V, A, W) |
-| `/Dc/0/Temperature` | Power board temperature (°C) |
+| `/Dc/0/Temperature` | Power board temperature (°C; the GX screen and VRM convert it to your unit) |
 | `/State` | 0 off, 2 fault, 11 regulating, 245 starting |
 | `/Nomadic/Online` | 1 while frames are arriving |
 | `/Nomadic/OperatingMode`, `/Nomadic/OperatingModeText` | Raw DCDC_OPERATING_MODE and its text |

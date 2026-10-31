@@ -136,7 +136,7 @@
       <div class="plot"></div></div>
     <div class="card chart" data-chart="lv_voltage"><h3>12 V side voltage (V)</h3><div class="legend"></div><div class="plot"></div></div>
     <div class="card chart" data-chart="hv_voltage"><h3>48 V side voltage (V)</h3><div class="legend"></div><div class="plot"></div></div>
-    <div class="card chart" data-chart="temperature"><h3>Temperature (°C)</h3><div class="legend"></div><div class="plot"></div></div>
+    <div class="card chart" data-chart="temperature"><h3 id="temp-title">Temperature (°F)</h3><div class="legend"></div><div class="plot"></div></div>
   </div>
 
   <div class="grid">
@@ -156,7 +156,7 @@
       <h2>History as a table</h2>
       <details><summary>Show the points in the chosen range</summary>
         <div class="tablewrap"><table><thead><tr><th>Time</th><th>12 V (V)</th><th>12 V (A)</th><th>12 V (W)</th>
-          <th>48 V (V)</th><th>48 V (A)</th><th>48 V (W)</th><th>°C</th></tr></thead><tbody id="tbody"></tbody></table></div>
+          <th>48 V (V)</th><th>48 V (A)</th><th>48 V (W)</th><th id="temp-col">°F</th></tr></thead><tbody id="tbody"></tbody></table></div>
       </details>
       <p class="sub" style="margin:10px 0 0">One point every 10 seconds (the average of about 1,000 readings), kept for 24 hours.
         The history starts again when the monitor restarts.</p>
@@ -167,6 +167,10 @@
 <script>
 const $ = id => document.getElementById(id);
 const fmt = (v, d, u) => v == null ? '—' : v.toFixed(d) + ' ' + u;
+// Temperatures arrive in °C; the driver says which unit to show (the Cerbo's own setting).
+let tUnit = 'F';
+const toUnit = c => c == null ? null : tUnit === 'F' ? c * 9 / 5 + 32 : c;
+const tSuffix = () => '°' + tUnit;
 const hex = (v, w) => v == null ? '—' : '0x' + v.toString(16).toUpperCase().padStart(w, '0');
 const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -185,7 +189,8 @@ function render(s) {
   $('hv-v').textContent = fmt(e.hv_voltage, 1, 'V');
   $('hv-i').textContent = fmt(e.hv_current, 0, 'A');
   $('hv-p').textContent = fmt(s.power.hv, 0, 'W');
-  $('temp').textContent = fmt(e.temperature, 0, '°C');
+  if (s.temperature_unit) tUnit = s.temperature_unit;
+  $('temp').textContent = fmt(toUnit(e.temperature), 0, tSuffix());
 
   // Energy flow: the side whose current is positive is being charged (the output).
   const lvp = s.power.lv, hvp = s.power.hv;
@@ -237,7 +242,7 @@ const CHARTS = {
   hv_voltage: [['hv_voltage', '48 V side', '--hv']],
   temperature: [['temperature', 'Temperature', '--temp']],
 };
-const UNITS = {power: ['W', 0], lv_voltage: ['V', 2], hv_voltage: ['V', 2], temperature: ['°C', 1]};
+const UNITS = {power: ['W', 0], lv_voltage: ['V', 2], hv_voltage: ['V', 2], temperature: ['°F', 1]};
 const H = 170, M = {l: 46, r: 8, t: 8, b: 22};
 const NS = 'http://www.w3.org/2000/svg';
 let minutes = 60, hist = null, hoverT = null;
@@ -369,7 +374,16 @@ function drawAll() { document.querySelectorAll('.chart').forEach(drawChart); }
 async function loadHistory() {
   try {
     const r = await fetch('api/history?minutes=' + minutes, {cache: 'no-store'});
-    if (r.ok) { hist = await r.json(); drawAll(); drawTable(); }
+    if (r.ok) {
+      hist = await r.json();
+      if (hist.temperature_unit) tUnit = hist.temperature_unit;
+      const i = hist.fields.indexOf('temperature');
+      hist.points.forEach(p => { p[i] = toUnit(p[i]); });
+      UNITS.temperature[0] = tSuffix();
+      $('temp-title').textContent = 'Temperature (' + tSuffix() + ')';
+      $('temp-col').textContent = tSuffix();
+      drawAll(); drawTable();
+    }
   } catch (e) { /* the status pill already says the GX is unreachable */ }
 }
 

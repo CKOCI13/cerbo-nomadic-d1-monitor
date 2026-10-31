@@ -40,7 +40,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.1.2'
+VERSION = '2.1.3'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -69,6 +69,7 @@ DEFAULTS = {
         'port': '8088',
         'bind': '0.0.0.0',
         'password': '',
+        'temperature_unit': 'auto',
     },
 }
 
@@ -733,11 +734,62 @@ class DbusService:
         s['/GenericInput/precharge_status/Value'] = p and p['precharge_status']
 
 
+# --------------------------------------------------------------------------- temperature unit
+
+GX_TEMPERATURE_UNIT = ('com.victronenergy.settings', '/Settings/System/Units/Temperature')
+TEMPERATURE_UNITS = {'c': 'C', 'celsius': 'C', 'f': 'F', 'fahrenheit': 'F'}
+
+
+def read_gx_setting(service, path):
+    """One value from another D-Bus service (used for the GX display settings)."""
+    import dbus
+    bus = dbus.SessionBus() if 'DBUS_SESSION_BUS_ADDRESS' in os.environ else dbus.SystemBus()
+    return bus.get_object(service, path).GetValue(dbus_interface='com.victronenergy.BusItem', timeout=2)
+
+
+class TemperatureUnit:
+    """The unit the web page shows temperatures in: 'F' or 'C'.
+
+    [web] temperature_unit = auto follows the GX's own setting (Settings > General > Display &
+    Appearance > Data units > Temperature), which the GX screen and VRM already use for the
+    driver's readings. Fahrenheit or celsius in config.ini forces one. When auto can't read the
+    GX setting (on a PC, or with --no-dbus) the page shows Fahrenheit.
+    """
+    FALLBACK = 'F'
+    READ_EVERY = 10.0   # seconds; a change on the GX shows on the page within this time
+
+    def __init__(self, configured, reader=None):
+        text = (configured or 'auto').strip().lower()
+        self.forced = TEMPERATURE_UNITS.get(text)
+        if self.forced is None and text != 'auto':
+            log.warning('[web] temperature_unit = %s not understood (use auto, fahrenheit or celsius); '
+                        'using auto', configured)
+        self.reader = None if self.forced else reader
+        self.unit = self.forced or self.FALLBACK
+        self._next_read = 0.0
+
+    def poll(self, now=None):
+        if self.reader is None:
+            return
+        now = time.monotonic() if now is None else now
+        if now < self._next_read:
+            return
+        self._next_read = now + self.READ_EVERY
+        try:
+            value = str(self.reader(*GX_TEMPERATURE_UNIT)).strip().lower()
+        except Exception as e:   # settings service restarting, or no D-Bus: keep the last unit
+            log.debug('GX temperature unit not readable: %s', e)
+            return
+        if value in TEMPERATURE_UNITS:
+            self.unit = TEMPERATURE_UNITS[value]
+
+
 # --------------------------------------------------------------------------- web page
 
 class WebApp:
-    def __init__(self, cfg, telemetry, history):
+    def __init__(self, cfg, telemetry, history, temperature_unit=None):
         self.telemetry = telemetry
+        self.temperature_unit = temperature_unit or TemperatureUnit(cfg['web']['temperature_unit'])
         self.history = history
         self.name = cfg['dbus']['custom_name']
         self.can_cfg = cfg['can']   # live: shows the port "auto" found
@@ -753,6 +805,7 @@ class WebApp:
             'interface': self.can_cfg['interface'],
             'driver_version': VERSION,
             'monitor_only': True,
+            'temperature_unit': self.temperature_unit.unit,
             'online': snap['online'],
             'electric': e,
             'power': {'lv': power(e, 'lv'), 'hv': power(e, 'hv')},
@@ -769,6 +822,7 @@ class WebApp:
         minutes = min(int(m.group(1)), 24 * 60) if m else 60
         return {
             'interval': self.history.interval,
+            'temperature_unit': self.temperature_unit.unit,
             'fields': History.FIELDS,
             'points': self.history.points(minutes * 60),
         }
@@ -1039,6 +1093,8 @@ def main():
     watcher = StatusWatcher(interface)
 
     dbus_service = None
+    temperature_unit = TemperatureUnit(cfg['web']['temperature_unit'],
+                                       None if args.no_dbus else read_gx_setting)
     if not args.no_dbus:
         from dbus.mainloop.glib import DBusGMainLoop
         DBusGMainLoop(set_as_default=True)
@@ -1053,12 +1109,13 @@ def main():
     watcher.bus = bus
     start_thread('can-rx', rx_worker, bus, telemetry)
     if cfg['web'].getint('port'):
-        start_web(cfg, WebApp(cfg, telemetry, history))
+        start_web(cfg, WebApp(cfg, telemetry, history, temperature_unit))
 
     def tick():
         snap = telemetry.snapshot()
         watcher(snap)
         history.tick()
+        temperature_unit.poll()
         if dbus_service is not None:
             dbus_service.refresh(snap)
 
