@@ -53,6 +53,28 @@
   .arrow.on.left::after { left: -6px; border-right-color: var(--muted); border-left: 0; }
   #flow-text { text-align: center; color: var(--muted); font-size: 13px; }
 
+  /* Overview tile, styled like the Cerbo's Battery tile (only this page; the Cerbo's screens are unchanged) */
+  .tile { position: relative; overflow: hidden; border-radius: 10px; margin-bottom: 12px; color: #fff;
+          background: #1c6fb8; border: 2px solid #4cc3f0; font-variant-numeric: tabular-nums; }
+  .tile.flowing { background: linear-gradient(180deg, #1c6fb8 0%, #2a92d2 55%, #44ade3 100%); }
+  .tile.flowing::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(0deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.16) 50%, rgba(255,255,255,0) 100%);
+          background-size: 100% 200%; animation: rise 3s linear infinite; }
+  @keyframes rise { from { background-position: 0 0; } to { background-position: 0 -200%; } }
+  @media (prefers-reduced-motion: reduce) { .tile.flowing::before { animation: none; } }
+  .tile-head { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+               background: rgba(0,0,0,.18); font-weight: 650; font-size: 17px; }
+  .tile-head svg { width: 20px; height: 20px; flex: none; }
+  .tile-head .tt { margin-left: auto; padding: 2px 12px; border-radius: 999px; font-size: 17px; background: rgba(0,0,0,.2); }
+  .tile-head .tt.warn { background: var(--warn); } .tile-head .tt.bad { background: var(--bad); }
+  .tile-body { position: relative; padding: 6px 14px 12px; }
+  .tile-big { font-size: 56px; font-weight: 600; line-height: 1.1; }
+  .tile-big small { font-size: 32px; font-weight: 500; margin-left: 4px; }
+  .tile-state { font-size: 18px; opacity: .92; margin-bottom: 14px; }
+  .tile-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap: 6px 16px; }
+  .tile-row div { font-size: 22px; font-weight: 550; white-space: nowrap; }
+  .tile-row span { display: block; font-size: 12px; font-weight: 500; opacity: .8; text-transform: uppercase; letter-spacing: .04em; }
+
   /* charts */
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 10px; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
@@ -95,6 +117,25 @@
   </header>
 
   <div class="card" id="alarms"><h2>Active alarms</h2><ul id="alarm-list"></ul></div>
+
+  <section class="tile" id="tile" aria-label="Converter summary">
+    <div class="tile-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="2"/><path d="M13 7l-4 6h4l-2 4"/></svg>
+      <span id="tile-name">DC-DC D1</span>
+      <span class="tt" id="tile-temp" title="Converter temperature">—</span>
+    </div>
+    <div class="tile-body">
+      <div class="tile-big" id="tile-w">—</div>
+      <div class="tile-state" id="tile-state">—</div>
+      <div class="tile-row">
+        <div><span>12 V side</span><b id="tile-lv-v">—</b></div>
+        <div><span>12 V current</span><b id="tile-lv-i">—</b></div>
+        <div><span>48 V side</span><b id="tile-hv-v">—</b></div>
+        <div><span>48 V current</span><b id="tile-hv-i">—</b></div>
+      </div>
+    </div>
+  </section>
 
   <div class="card flow-card" style="margin-bottom:12px">
     <div class="flow" aria-hidden="true">
@@ -212,6 +253,23 @@ function render(s) {
     : dir === 1 ? 'Buck: 48 V side → 12 V side, ' + Math.abs(lvp) + ' W into the 12 V side'
     : dir === 2 ? 'Boost: 12 V side → 48 V side, ' + Math.abs(hvp == null ? lvp : hvp) + ' W into the 48 V side'
     : 'No energy flowing (standby)';
+
+  // Summary tile. Watts are the 48 V side's, the same figure as the Cerbo's Overview tile
+  // (+ while charging the 48 V battery, − while powering the 12 V side from it).
+  $('tile-name').textContent = s.name;
+  const num = (v, d) => v == null ? '—' : v.toFixed(d);
+  $('tile-w').innerHTML = hvp == null ? '—' : num(hvp, 0) + '<small>W</small>';
+  $('tile-state').textContent = !s.online ? 'No data from converter'
+    : dir === 1 ? 'Buck · powering the 12 V side'
+    : dir === 2 ? 'Boost · charging the 48 V battery'
+    : 'Standby';
+  $('tile').classList.toggle('flowing', s.online && dir !== 0);
+  $('tile-lv-v').textContent = fmt(e.lv_voltage, 2, 'V');
+  $('tile-lv-i').textContent = fmt(e.lv_current, 1, 'A');
+  $('tile-hv-v').textContent = fmt(e.hv_voltage, 2, 'V');
+  $('tile-hv-i').textContent = fmt(e.hv_current, 1, 'A');
+  $('tile-temp').textContent = fmt(toUnit(e.temperature), 0, tSuffix());
+  $('tile-temp').className = 'tt' + (lvl === 2 ? ' bad' : lvl === 1 ? ' warn' : '');
 
   const p = s.parameter || {};
   $('mode').textContent = p.operating_mode_text || '—';

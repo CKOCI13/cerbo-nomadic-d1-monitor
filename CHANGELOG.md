@@ -5,6 +5,11 @@ What changed in each version of the driver (`VERSION` in `dbus-nomadic-dcdc/dbus
 This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3.0 (with control) were developed
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
+## 2.4.0 (2026-11-05)
+
+- **A summary tile at the top of the web page**, styled like the Cerbo's Overview **Battery** tile: the watts (the same figure as the Overview's Alternator tile: + while charging the 48 V battery, − while powering the 12 V side), **Buck** or **Boost**, the 12 V and 48 V sides' **volts** and **amps**, and the **temperature** (top right, orange at the warning, red at the alarm). It has the Battery tile's blue and its rising shimmer while energy is flowing (still when the device asks for reduced motion). Victron's Overview tiles can't be changed by a driver, so this is the place for it.
+- Only the web page changed. The Cerbo's screens, the D-Bus values, VRM and the rest of the web page are exactly as in 2.3.0.
+
 ## 2.3.0 (2026-11-05)
 
 The D1's temperature is one of its main operating readings, so it's back on every Cerbo screen, with warnings.

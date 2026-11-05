@@ -70,7 +70,8 @@ New to all this? **[How it works, in plain English](docs/how-it-works.md)** expl
   at 212 °F and an alarm at 221 °F, both adjustable.
 - **Everywhere Victron does:** Remote Console, the VRM portal and app, MQTT and Node-RED.
 - **Its own web page** at `http://<cerbo-address>:8088`. Any tablet (Android or iPad), phone or laptop on the same
-  network can open it. It shows live values, which way the energy is flowing, and charts of the last 24 hours.
+  network can open it. At the top is a tile styled like the Cerbo's Battery tile: watts, buck or boost, both
+  sides' volts and amps, and the temperature. Below it: which way the energy is flowing, and charts of the last 24 hours.
 - **Help getting started:** a pretend converter for trying it out, and a "find the converter" check.
 
 | Cerbo screen | When there's a problem | VRM app |
