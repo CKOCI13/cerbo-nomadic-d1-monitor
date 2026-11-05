@@ -40,7 +40,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.1.3'
+VERSION = '2.2.0'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -59,7 +59,7 @@ DEFAULTS = {
         'timeout': '1.0',
     },
     'dbus': {
-        'service_class': 'dcdc',
+        'service_class': 'alternator',
         'device_instance': '70',
         'custom_name': 'DC-DC D1',
         'update_interval': '1.0',
@@ -109,6 +109,28 @@ def save_json(path, data):
 
 ELECTRIC_FIELDS = ('lv_voltage', 'lv_current', 'hv_voltage', 'hv_current', 'temperature')
 
+MODE_BOOST = 0x3   # 12 V side -> 48 V side
+MODE_BUCK = 0x4    # 48 V side -> 12 V side
+
+
+def orient(electric, parameter):
+    """Give the currents one sign convention: + = flowing into that side's battery.
+
+    The CAN document's example frame is signed that way, but a real D1 boosting at 132 A reported both
+    currents as positive. So while the converter says it is boosting or bucking, the direction comes
+    from the operating mode: boost takes current out of the 12 V side and puts it into the 48 V side,
+    buck the other way round. In every other mode the currents are kept as the converter sends them.
+    The values as received stay available as lv_current_reported / hv_current_reported.
+    """
+    e = dict(electric)
+    e['lv_current_reported'], e['hv_current_reported'] = e['lv_current'], e['hv_current']
+    mode = parameter and parameter['operating_mode']
+    if mode == MODE_BOOST:
+        e['lv_current'], e['hv_current'] = -abs(e['lv_current']), abs(e['hv_current'])
+    elif mode == MODE_BUCK:
+        e['lv_current'], e['hv_current'] = abs(e['lv_current']), -abs(e['hv_current'])
+    return e
+
 
 class Telemetry:
     """Latest decoded frames from the converter, plus running averages for the history."""
@@ -137,6 +159,9 @@ class Telemetry:
             return
         value = decode(data)
         with self._lock:
+            if can_id == nc.ID_ELECTRIC:
+                parameter = self._latest.get(nc.ID_PARAMETER, (None, None))[1]
+                value = orient(value, parameter)
             self._latest[can_id] = (time.monotonic(), value)
             self._counts[can_id] += 1
             if can_id == nc.ID_ELECTRIC:
@@ -627,10 +652,18 @@ class DbusService:
         svc.add_path('/HardwareVersion', None)
         svc.add_path('/Connected', 1)
 
-        V, A, W, C = _text('V', 2), _text('A', 0), _text('W', 0), _text('C', 0)
+        # Which side is the "output" (Dc/0) Victron's screens and totals see:
+        #   alternator: the 48 V side, the battery it charges (the Overview gets a tile, and the
+        #               GX's DC loads/system figure counts what the D1 puts into or takes out of it)
+        #   dcdc and any other class: the 12 V side, as for a DC-DC charger
+        # Dc/0 is + when current flows into that battery; Dc/In is + when current flows from the
+        # other side into the converter. Both are negative while the converter runs the other way.
+        # The D1's temperature is its own, not a battery's or an alternator's, so it isn't published
+        # as /Dc/0/Temperature (the switch pane and the web page show it).
+        self.output_side = 'hv' if d['service_class'] == 'alternator' else 'lv'
+        V, A, W = _text('V', 2), _text('A', 0), _text('W', 0)
         for path, fmt in (('/Dc/0/Voltage', V), ('/Dc/0/Current', A), ('/Dc/0/Power', W),
-                          ('/Dc/0/Temperature', C), ('/Dc/In/V', V), ('/Dc/In/I', A),
-                          ('/Dc/In/P', W)):
+                          ('/Dc/In/V', V), ('/Dc/In/I', A), ('/Dc/In/P', W)):
             svc.add_path(path, None, gettextcallback=fmt)
         svc.add_path('/State', None)
 
@@ -693,13 +726,14 @@ class DbusService:
         s = self.svc
         e, p, v = snap['electric'], snap['parameter'], snap['version']
 
-        s['/Dc/0/Voltage'] = e and e['lv_voltage']
-        s['/Dc/0/Current'] = e and e['lv_current']
-        s['/Dc/0/Power'] = power(e, 'lv')
-        s['/Dc/0/Temperature'] = e and e['temperature']
-        s['/Dc/In/V'] = e and e['hv_voltage']
-        s['/Dc/In/I'] = e and e['hv_current']
-        s['/Dc/In/P'] = power(e, 'hv')
+        out = self.output_side
+        inp = 'lv' if out == 'hv' else 'hv'
+        s['/Dc/0/Voltage'] = e and e[out + '_voltage']
+        s['/Dc/0/Current'] = e and e[out + '_current']
+        s['/Dc/0/Power'] = power(e, out)
+        s['/Dc/In/V'] = e and e[inp + '_voltage']
+        s['/Dc/In/I'] = e and -e[inp + '_current']
+        s['/Dc/In/P'] = e and -power(e, inp)
         s['/State'] = victron_state(p)
         s['/FirmwareVersion'] = v and v['software_raw']
         s['/HardwareVersion'] = v and v['hardware']

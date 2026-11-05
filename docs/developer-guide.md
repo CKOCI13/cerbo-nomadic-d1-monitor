@@ -136,11 +136,15 @@ positions, scales and offsets are in [`nomadic_can.py`](../dbus-nomadic-dcdc/nom
 
 ## What appears on the Cerbo and in VRM (D-Bus)
 
-`class DbusService` publishes the service `com.victronenergy.dcdc.nomadic_<interface>` with three groups of paths:
+`class DbusService` publishes the service `com.victronenergy.<service_class>.nomadic_<interface>` (by default
+`com.victronenergy.alternator.nomadic_auto`) with three groups of paths:
 
-1. **Standard DC-DC converter paths** (`/Dc/0/*` for the 12 V side, `/Dc/In/*` for the 48 V side, `/State`,
-   `/FirmwareVersion` and so on), so it shows up in the GX device list like any converter. There's no `/Mode`, so
-   the device page has no on/off switch.
+1. **Standard paths** (`/Dc/0/*`, `/Dc/In/*`, `/State`, `/FirmwareVersion` and so on), so it shows up in the GX
+   device list. As an `alternator` (default), `/Dc/0` is the 48 V side, which gives it an Overview tile and puts it
+   in `dbus-systemcalc-py`'s DC system sum (that sum ignores `dcdc` services, so DC Loads went negative while the D1
+   charged the battery). As a `dcdc`, `/Dc/0` is the 12 V side. `/Dc/0` is + into that battery, `/Dc/In` is + from
+   that side into the converter. There's no `/Mode`, so the device page has no on/off switch, and no `/Link/*`, so
+   DVCC never writes anything.
 2. **Its own paths** under `/Nomadic/*`: raw status bitfields and alarm texts, for MQTT and Node-RED.
 3. **The Cerbo screen**, using Victron's [switch API](https://github.com/victronenergy/venus/wiki/dbus#switch):
    one `/GenericInput/<item>` per reading (read-only values; there are no `/SwitchableOutput` controls).
@@ -311,10 +315,10 @@ GitHub runs them on every push (see [`.github/workflows/tests.yml`](../.github/w
 
 Waiting on real hardware or on Nomadic:
 
-- **Whether the D1 sends its status without receiving commands.** The monitor depends on it; the scan shows it
-  at once.
-- **Current sign convention.** The monitor shows what the D1 reports and assumes "+ = into that battery" only in
-  its explanations and the web page's flow arrow.
+- **Answered on real hardware (2026-11-04):** the D1 sends its status without receiving commands (500 kbit/s on
+  that van), and while boosting it reported **both** currents as positive. `orient()` in `Telemetry.feed` now takes
+  the direction from the operating mode (boost: out of 12 V, into 48 V; buck: the reverse) and keeps the reported
+  values as `lv_current_reported` / `hv_current_reported`. Still to see: the signs while bucking.
 - **What the D1 does when control frames stop:** the reason control was removed. Only relevant if control ever
   comes back.
 

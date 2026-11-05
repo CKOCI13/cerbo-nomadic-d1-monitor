@@ -234,7 +234,10 @@ Software 1.2.3  Hardware 5</pre>
   <tr><td><b>DC-DC D1 12 V side</b><br><b>DC-DC D1 48 V side</b></td><td>Current, Power, Voltage</td><td>Live readings for that battery side. <b>+</b> means energy going into that battery, <b>−</b> coming out (see below)</td></tr>
 </table>
 <p>To rename, move or hide any item, go to <b>Settings › Devices › DC-DC D1</b>. A hidden <b>Precharge status</b> item is there too (the D1 manual doesn't use precharge).
-The D1 also appears under <b>Settings › Devices</b> as a DC-DC converter, with its 12 V side as the output and its 48 V side as the input.</p>
+</p>
+<h3>On the Overview page</h3>
+<p>The D1 has an <b>Alternator</b> tile: <b>+</b> watts while it charges the 48 V battery, <b>−</b> while it powers the 12 V side from it.
+Listing it as an alternator keeps the Cerbo's <b>DC Loads</b> figure right. Nothing is sent to the D1. For no tile, set <code>service_class = dcdc</code>.</p>
 
 <div class="cols page">
   <div>
@@ -277,7 +280,7 @@ until it falls below 12.3 V. In between it waits in <b>Standby</b>, with no curr
   <tr><td>Status shows Standby</td><td>Normal when the 12 V side is between 12.5 and 13.5 V: the D1 has nothing to do.</td></tr>
   <tr><td>Status shows No communication</td><td>The Cerbo can't hear the D1. Check KL30/KL15, the cable and the termination.</td></tr>
   <tr><td>The charts say "Collecting data…"</td><td>They add a point every 10 seconds. Wait a minute. They start empty after every restart of the monitor or the Cerbo.</td></tr>
-  <tr><td>The "DC system" figure on the Cerbo looks wrong</td><td>The Cerbo counts the D1 as a DC-DC charger. Set <code>service_class = nomadicdcdc</code> in config.ini (option 1, then 4). The D1 leaves the device list, but the cards, VRM and web page keep working.</td></tr>
+  <tr><td>The "DC Loads" figure on the Cerbo goes negative</td><td>The D1 is set up as a DC-DC converter (<code>service_class = dcdc</code>), which Victron leaves out of its sums. Set <code>service_class = alternator</code> (the default) in config.ini (option 1, then 4).</td></tr>
 </table>
 <p><b>To change settings later,</b> open Cerbo Setup, choose 1 to edit config.ini, save, then choose 4. <b>To remove it,</b> choose 8 and type YES. The D1 is not affected either way.</p>
 

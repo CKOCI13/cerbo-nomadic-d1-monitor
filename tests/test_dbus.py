@@ -34,7 +34,7 @@ class DbusTest(unittest.TestCase):
 
     def test_service_name_and_registration(self):
         self.assertTrue(self.svc.registered)
-        self.assertEqual(self.svc.name, 'com.victronenergy.dcdc.nomadic_auto')
+        self.assertEqual(self.svc.name, 'com.victronenergy.alternator.nomadic_auto')
 
     def test_connection_shows_the_port_auto_found(self):
         self.assertTrue(self.value('/Mgmt/Connection').startswith('CAN auto'))
@@ -102,9 +102,13 @@ class DbusTest(unittest.TestCase):
         self.assertEqual(driver.ALARM_LABELS[gi('alarm')], 'CAN loss')
         self.assertEqual(gi('alarm', 'Status'), 1)
         self.assertEqual(gi('alarm', 'Settings/PrimaryLabel'), '5 active')
-        self.assertEqual(self.svc['/Dc/0/Voltage'], 13.6)
-        self.assertEqual(self.svc['/Dc/0/Power'], 272)
-        self.assertEqual(self.svc['/Dc/In/P'], -256)
+        # Shown as an alternator: Dc/0 is the 48 V side. Bucking, current leaves the 48 V battery
+        # (Dc/0 negative) and goes into the 12 V side (Dc/In negative: nothing flows in from it).
+        self.assertEqual(self.svc['/Dc/0/Voltage'], 51.2)
+        self.assertEqual(self.svc['/Dc/0/Power'], -256)
+        self.assertEqual(self.svc['/Dc/In/V'], 13.6)
+        self.assertEqual(self.svc['/Dc/In/P'], -272)
+        self.assertNotIn('/Dc/0/Temperature', self.svc.paths)   # it's the D1's, not a battery's
         self.assertEqual(self.svc['/FirmwareVersion'], 0x123)
         self.assertEqual(self.svc['/Nomadic/SoftwareVersion'], '1.2.3')
         self.assertEqual(self.svc['/State'], 11)
@@ -124,7 +128,7 @@ class DbusTest(unittest.TestCase):
         d = driver.DbusService(self.cfg, self.ui)
         d.refresh(self.t.snapshot())
         self.assertFalse(any(p.startswith('/GenericInput') for p in d.svc.paths))
-        self.assertEqual(d.svc['/Dc/0/Voltage'], 13.6)
+        self.assertEqual(d.svc['/Dc/0/Voltage'], 51.2)
 
 
 if __name__ == '__main__':
