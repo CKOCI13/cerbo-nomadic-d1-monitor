@@ -179,26 +179,42 @@ API: `GET /api/status` (live values) and `GET /api/history?minutes=60` (one poin
 `time, lv_voltage, lv_current, lv_power, hv_voltage, hv_current, hv_power, temperature`). The history is kept in
 memory and starts again when the monitor restarts.
 
-### As a DC-DC converter in the device list
+### As an alternator (default) or a DC-DC converter
 
-The monitor also registers as a standard DC-DC converter named `custom_name` (default "DC-DC D1"). Output
-(`Dc/0`) is always the **LV side** and input (`Dc/In`) is always the **HV side**, whichever direction it runs.
+The monitor also registers as a standard Victron device named `custom_name` (default "DC-DC D1"), of the kind
+`service_class` sets:
+
+| `service_class` | Output (`Dc/0`) | Input (`Dc/In`) | On the GX |
+|---|---|---|---|
+| `alternator` (default) | HV (48 V) side | LV (12 V) side | Device list, an **Alternator tile on the Overview**, and counted in the GX's DC Loads / DC system figure |
+| `dcdc` | LV (12 V) side | HV (48 V) side | Device list only. Victron's `dbus-systemcalc-py` leaves DC-DC converters out of its sums, so DC Loads is off by the converter's power while it runs |
+
+`Dc/0/Current` and `Power` are **+ while current flows into that battery**. `Dc/In/I` and `P` are **+ while
+current flows from that side into the converter**. Both turn negative while the converter runs the other way.
+
+**Direction.** A real D1 reported both currents as positive while boosting, so the monitor takes the direction
+from its operating mode: in boost (0x3) current leaves the 12 V side and enters the 48 V side, in buck (0x4) the
+other way round. In every other mode it keeps the sign the D1 sends. The switch pane, web page and history use
+the same convention (+ = into that battery).
+
+**DVCC.** As an alternator, the GX's DVCC sees the D1 as a charger, but it only writes to `/Link/*` paths a device
+publishes, and this one publishes none, so nothing is ever sent (and the D1 has no settings the GX could change).
+With a Victron Multi or Quattro under DVCC, the D1's charge current is subtracted from what the Multi may charge,
+as for any alternator.
+
+The D1's temperature is its own, so it isn't published as `/Dc/0/Temperature` (which the GX would label
+"Battery temperature" or "Alternator temperature"). The switch pane and the web page show it.
 There's no on/off switch on its page.
-
-If the GX's "DC system" or "DC loads" figures look wrong after installing, it is because the GX counts this as
-a DC-DC charger. In that case set `service_class = nomadicdcdc`. The converter drops out of the device list,
-but the switch pane, VRM Switches, D-Bus, MQTT and the web page keep working.
 
 ### D-Bus / MQTT / Node-RED
 
-Service: `com.victronenergy.dcdc.nomadic_<interface>` (`nomadic_auto` with the default `interface = auto`) (MQTT: `N/<portal-id>/dcdc/<device_instance>/...`).
+Service: `com.victronenergy.<service_class>.nomadic_<interface>`, so `com.victronenergy.alternator.nomadic_auto` with the defaults (MQTT: `N/<portal-id>/alternator/<device_instance>/...`).
 Every value path is read-only.
 
 | Path | Meaning |
 |---|---|
-| `/Dc/0/Voltage`, `/Dc/0/Current`, `/Dc/0/Power` | LV side (V, A, W) |
-| `/Dc/In/V`, `/Dc/In/I`, `/Dc/In/P` | HV side (V, A, W) |
-| `/Dc/0/Temperature` | Power board temperature (°C) |
+| `/Dc/0/Voltage`, `/Dc/0/Current`, `/Dc/0/Power` | Output side (V, A, W): HV side as an alternator, LV side as `dcdc`. + = into that battery |
+| `/Dc/In/V`, `/Dc/In/I`, `/Dc/In/P` | Input side (V, A, W): the other side. + = from that side into the converter |
 | `/State` | 0 off, 2 fault, 11 regulating, 245 starting |
 | `/Nomadic/Online` | 1 while frames are arriving |
 | `/Nomadic/OperatingMode`, `/Nomadic/OperatingModeText` | Raw DCDC_OPERATING_MODE and its text |
@@ -211,7 +227,7 @@ Every value path is read-only.
 ## Trying it without a converter
 
 `dbus-nomadic-dcdc.py --simulate` (Cerbo Setup option 9) runs the monitor against a pretend D1 and never opens a
-CAN socket. It registers separately (`com.victronenergy.dcdc.nomadic_sim`, device instance + 1, name
+CAN socket. It registers separately (`com.victronenergy.<service_class>.nomadic_sim`, device instance + 1, name
 "… (SIMULATED)", web page on port 8089, `ui-sim.json`), so it can run beside a real installation. The pretend D1
 follows the manual's automatic logic, with a 12 V side that alternates between a load and a charging source, so
 buck, standby and boost all show up within a few minutes. Add `--no-dbus` to run it on any PC.
