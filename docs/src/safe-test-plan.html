@@ -17,7 +17,7 @@ first thing that looks wrong.</p>
 
 <div class="cols">
   <div class="panel blue"><h3>What protects you</h3><ul>
-    <li>The D1 protects itself (D1 manual). It stops if the 12 V side goes over 16–18 V or under 8 V, the 48 V side goes over 58–60 V or under 24 V, the current goes over 213 A, there's a short, or it gets hotter than 120 °C inside</li>
+    <li>The D1 protects itself (D1 manual). It stops if the 12 V side goes over 16–18 V or under 8 V, the 48 V side goes over 58–60 V or under 24 V, the current goes over 213 A, there's a short, or it gets hotter than 248 °F (120 °C) inside</li>
     <li>Your BMS and fuses on HV+, LV+ and KL30</li>
     <li>The cable only carries data, and the monitor never transmits on it</li></ul></div>
   <div class="panel green"><h3>Before you start</h3><ul>
@@ -68,6 +68,7 @@ first thing that looks wrong.</p>
 <p>Choose <b>4</b> (install). Leave it running for a day.</p>
 <table class="check"><tr><th>Check</th><th>OK</th></tr>
   <tr><td>Three cards on the Cerbo, in VRM and on the web page, with sensible readings</td><td></td></tr>
+  <tr><td>The D1's temperature shows on the Overview's Alternator tile, as a <b>DC-DC D1</b> gauge on Levels › Environment and on the web page (OK). While it works hard, note the highest reading: up to 212 °F is fine, a High Temperature warning comes at 212 °F, and the D1 starts derating at 221 °F. Max seen: ______ °F</td><td></td></tr>
   <tr><td>The web page's charts cover the day, with no gaps you can't explain (a gap means the D1 went quiet, or the Cerbo restarted)</td><td></td></tr>
   <tr><td>The D1 behaves exactly as before: buck when the 12 V side is low, boost when it's high, standby otherwise</td><td></td></tr>
   <tr><td>After a Cerbo reboot the monitor comes back by itself (option 5 shows "Converter online")</td><td></td></tr>

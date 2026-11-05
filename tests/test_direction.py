@@ -62,7 +62,7 @@ class GxMappingTest(unittest.TestCase):
         self.assertEqual((s['/Dc/0/Voltage'], s['/Dc/0/Current'], s['/Dc/0/Power']), (54.2, 30, 1626))
         # Input = taken from the 12 V side
         self.assertEqual((s['/Dc/In/V'], s['/Dc/In/I'], s['/Dc/In/P']), (13.0, 132, 1716))
-        self.assertNotIn('/Dc/0/Temperature', s.paths)
+        self.assertEqual(s['/Dc/0/Temperature'], 44)   # shown on the Overview tile
 
     def test_dcdc_boosting_runs_backwards(self):
         s = self.service('dcdc')
@@ -70,6 +70,8 @@ class GxMappingTest(unittest.TestCase):
         # Output = the 12 V side, input = the 48 V side; boosting, both run the other way
         self.assertEqual((s['/Dc/0/Voltage'], s['/Dc/0/Current'], s['/Dc/0/Power']), (13.0, -132, -1716))
         self.assertEqual((s['/Dc/In/V'], s['/Dc/In/I'], s['/Dc/In/P']), (54.2, -30, -1626))
+        # A dcdc device page would label it "Battery temperature", so it isn't published there
+        self.assertNotIn('/Dc/0/Temperature', s.paths)
 
     def test_switch_pane_cards_keep_both_sides(self):
         s = self.service('alternator')

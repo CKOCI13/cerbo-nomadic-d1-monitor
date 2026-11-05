@@ -40,7 +40,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.2.0'
+VERSION = '2.3.0'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -65,10 +65,17 @@ DEFAULTS = {
         'update_interval': '1.0',
         'switch_pane': 'yes',
     },
+    'temperature': {
+        'warning': '100',
+        'alarm': '105',
+        'sensor': 'yes',
+        'sensor_instance': '71',
+    },
     'web': {
         'port': '8088',
         'bind': '0.0.0.0',
         'password': '',
+        'temperature_unit': 'auto',
     },
 }
 
@@ -499,6 +506,8 @@ def simulation_config(cfg):
     d = cfg['dbus']
     d['device_instance'] = str(d.getint('device_instance') + 1)
     d['custom_name'] = d['custom_name'] + ' (SIMULATED)'
+    t = cfg['temperature']
+    t['sensor_instance'] = str(t.getint('sensor_instance') + 1)
     if cfg['web'].getint('port'):
         cfg['web']['port'] = str(cfg['web'].getint('port') + 1)
 
@@ -566,7 +575,9 @@ SHORT_MODES = {0x1: 'Starting up', 0x2: 'Standby', 0x3: 'Boost 12V to 48V', 0x4:
                0x5: 'Autonomous', 0x7: 'Shutting down', 0x8: 'Derating (hot)', 0xF: 'Invalid'}
 MODE_LABELS = [SHORT_MODES.get(m, 'Reserved') for m in range(16)] + ['No communication']
 PRECHARGE_LABELS = ['Reserved', 'In progress', 'Not active', 'Invalid']
-ALARM_LABELS = ['None'] + [text for _, _, text in nc.ALARMS]
+# After the D1's own alarms: the monitor's temperature levels ([temperature] in config.ini)
+TEMP_ALARM_LABELS = ['Temperature high (warning)', 'Temperature very high (alarm)']
+ALARM_LABELS = ['None'] + [text for _, _, text in nc.ALARMS] + TEMP_ALARM_LABELS
 
 # The Cerbo screen: three cards. The device card ("DC-DC D1") holds the state of the
 # converter; one card per battery side holds its voltage, current and power. Items on a card
@@ -597,6 +608,70 @@ def power(electric, side):
     return round(electric[side + '_voltage'] * electric[side + '_current'])
 
 
+# --------------------------------------------------------------------------- temperature levels
+
+# The D1's power-board temperature (D1 manual Rev D, section IV.B, "Thermal Protection & Derating"):
+#   -40 to 105 degC  full rated output
+#   105 to 120 degC  current derated in a straight line from 100 % down to 0 %
+#   above 120 degC   conversion stopped, the D1 reports a fault
+# The D1 says nothing until it derates, so the monitor raises its own warning and alarm earlier.
+D1_DERATE_C = 105
+D1_SHUTDOWN_C = 120
+TEMP_OK, TEMP_WARNING, TEMP_ALARM = 0, 1, 2   # same codes as Victron's /Alarms/* paths
+TEMP_HYSTERESIS = 3.0   # degC below a level before it clears, so it doesn't flicker on and off
+
+
+def c_to_f(c):
+    return c * 9 / 5 + 32
+
+
+class TemperatureWatch:
+    """Warning / alarm level from the D1's board temperature, with a little hysteresis.
+
+    [temperature] warning and alarm in config.ini are in degC (defaults 100 and 105 = 212 and
+    221 degF). No reading (converter offline) clears the level.
+    """
+
+    def __init__(self, cfg):
+        t = cfg['temperature']
+        self.warning = t.getfloat('warning')
+        self.alarm = t.getfloat('alarm')
+        if self.alarm < self.warning:
+            log.warning('[temperature] alarm (%g) is below warning (%g); using %g for both',
+                        self.alarm, self.warning, self.alarm)
+            self.warning = self.alarm
+        self.level = TEMP_OK
+        self.temperature = None
+
+    def update(self, snap):
+        e = snap['electric']
+        c = None if e is None else e['temperature']
+        self.temperature = c
+        if c is None:
+            self.level = TEMP_OK
+            return self.level
+        level = TEMP_ALARM if c >= self.alarm else TEMP_WARNING if c >= self.warning else TEMP_OK
+        if level < self.level:   # falling: hold each level until clearly below its threshold
+            if self.level == TEMP_ALARM and c > self.alarm - TEMP_HYSTERESIS:
+                level = TEMP_ALARM
+            elif level == TEMP_OK and c > self.warning - TEMP_HYSTERESIS:
+                level = TEMP_WARNING
+        self.level = level
+        return level
+
+    def text(self, unit='F'):
+        """Plain-words message for the web page, or None while the temperature is fine."""
+        if self.level == TEMP_OK or self.temperature is None:
+            return None
+
+        def show(c):
+            return '%.0f °F' % c_to_f(c) if unit == 'F' else '%.0f °C' % c
+        name, limit = ('alarm', self.alarm) if self.level == TEMP_ALARM else ('warning', self.warning)
+        return ('Converter temperature %s, above the %s level (%s). The D1 cuts its current back from %s '
+                'and stops above %s.' % (show(self.temperature), name, show(limit), show(D1_DERATE_C),
+                                         show(D1_SHUTDOWN_C)))
+
+
 class UiSettings:
     """Switch-pane names, cards and visibility as changed on the GX, kept across restarts."""
 
@@ -620,7 +695,7 @@ class DbusService:
     visibility).
     """
 
-    def __init__(self, cfg, ui_settings):
+    def __init__(self, cfg, ui_settings, temperature_watch=None):
         for p in VELIB_PATHS:
             if os.path.isdir(p):
                 sys.path.insert(1, p)
@@ -628,6 +703,7 @@ class DbusService:
         from vedbus import VeDbusService
 
         self.ui = ui_settings
+        self.temp = temperature_watch or TemperatureWatch(cfg)
         d = cfg['dbus']
         iface = cfg['can']['interface']
         name = 'com.victronenergy.%s.nomadic_%s' % (
@@ -658,13 +734,21 @@ class DbusService:
         #   dcdc and any other class: the 12 V side, as for a DC-DC charger
         # Dc/0 is + when current flows into that battery; Dc/In is + when current flows from the
         # other side into the converter. Both are negative while the converter runs the other way.
-        # The D1's temperature is its own, not a battery's or an alternator's, so it isn't published
-        # as /Dc/0/Temperature (the switch pane and the web page show it).
         self.output_side = 'hv' if d['service_class'] == 'alternator' else 'lv'
         V, A, W = _text('V', 2), _text('A', 0), _text('W', 0)
         for path, fmt in (('/Dc/0/Voltage', V), ('/Dc/0/Current', A), ('/Dc/0/Power', W),
                           ('/Dc/In/V', V), ('/Dc/In/I', A), ('/Dc/In/P', W)):
             svc.add_path(path, None, gettextcallback=fmt)
+        # The D1's board temperature. As an alternator the GX shows it on the Overview tile (top
+        # right, in the GX's unit) and on the device page as "Alternator temperature". As a dcdc
+        # the device page would call it "Battery temperature", so it's left out there; the
+        # temperature sensor below, the switch pane and the web page show it in either case.
+        self.publish_temperature = d['service_class'] == 'alternator'
+        if self.publish_temperature:
+            svc.add_path('/Dc/0/Temperature', None, gettextcallback=_text('C', 0))
+        # 0 ok, 1 warning, 2 alarm: the GX raises a "High Temperature" notification from it (for
+        # an alternator), shows it on the Notifications page and passes it to VRM.
+        svc.add_path('/Alarms/HighTemperature', 0)
         svc.add_path('/State', None)
 
         for path in ('/Nomadic/Online', '/Nomadic/OperatingMode', '/Nomadic/OperatingModeText',
@@ -681,6 +765,9 @@ class DbusService:
         if needs_register:
             svc.register()
         log.info('Registered %s on D-Bus (monitor only)', name)
+
+        t = cfg['temperature']
+        self.sensor = TemperatureSensor(cfg, ui_settings, VeDbusService) if t.getboolean('sensor') else None
 
     def _add_input(self, device_name, channel, name, input_type, unit, decimals, labels, card):
         base = '/GenericInput/' + channel
@@ -735,6 +822,12 @@ class DbusService:
         s['/Dc/In/I'] = e and -e[inp + '_current']
         s['/Dc/In/P'] = e and -power(e, inp)
         s['/State'] = victron_state(p)
+        level = self.temp.update(snap)
+        if self.publish_temperature:
+            s['/Dc/0/Temperature'] = e and e['temperature']
+        s['/Alarms/HighTemperature'] = level
+        if self.sensor is not None:
+            self.sensor.refresh(e and e['temperature'], snap['online'])
         s['/FirmwareVersion'] = v and v['software_raw']
         s['/HardwareVersion'] = v and v['hardware']
 
@@ -757,7 +850,9 @@ class DbusService:
         s = self.svc
         e, p = snap['electric'], snap['parameter']
         alarms = nc.active_alarms(p)
-        has_fault = any(i < nc.FAULT_ALARM_COUNT for i in alarms)
+        has_fault = any(i < nc.FAULT_ALARM_COUNT for i in alarms) or self.temp.level == TEMP_ALARM
+        if self.temp.level != TEMP_OK:   # after the D1's own alarms
+            alarms = alarms + [len(nc.ALARMS) + self.temp.level - 1]
 
         s['/GenericInput/alarm/Value'] = None if p is None else (alarms[0] + 1 if alarms else 0)
         s['/GenericInput/alarm/Status'] = 1 if has_fault else 0
@@ -775,11 +870,128 @@ class DbusService:
         s['/GenericInput/precharge_status/Value'] = p and p['precharge_status']
 
 
+class TemperatureSensor:
+    """The D1's board temperature as its own GX temperature sensor (com.victronenergy.temperature).
+
+    That puts it where the GX shows temperature sensors: a gauge on Levels > Environment, an entry
+    in the device list, a choice for the Brief page's centre circle, the relay's temperature
+    conditions and VRM. Its type is "Water heater", the only sensor type whose gauge (0 to 100 degC,
+    32 to 212 degF) covers the D1's normal working range: a working D1 reads around 80 degC (180 degF),
+    beyond the Generic gauge's 60 degC (140 degF). The type can be changed on the sensor's Setup page.
+    Read-only: nothing here reaches the converter.
+    """
+
+    TYPE_WATER_HEATER = 5
+    TYPES = range(7)   # battery, fridge, generic, room, outdoor, water heater, freezer
+
+    def __init__(self, cfg, ui_settings, service_class):
+        self.ui = ui_settings
+        d, iface = cfg['dbus'], cfg['can']['interface']
+        name = 'com.victronenergy.temperature.nomadic_%s' % re.sub(r'[^A-Za-z0-9_]', '_', iface)
+        bus = private_bus()   # a second service in one process needs its own bus connection
+        try:
+            svc = service_class(name, bus=bus, register=False)
+            needs_register = True
+        except TypeError:
+            svc = service_class(name, bus)
+            needs_register = False
+        self.svc = svc
+        svc.add_path('/Mgmt/ProcessName', os.path.abspath(__file__))
+        svc.add_path('/Mgmt/ProcessVersion', VERSION)
+        svc.add_path('/Mgmt/Connection', 'CAN ' + iface + ' (monitor only)')
+        svc.add_path('/DeviceInstance', cfg['temperature'].getint('sensor_instance'))
+        svc.add_path('/ProductId', 0xFFFF)
+        svc.add_path('/ProductName', 'Nomadic D1 board temperature')
+        svc.add_path('/CustomName', d['custom_name'])
+        svc.add_path('/Connected', 1)
+        svc.add_path('/Temperature', None, gettextcallback=_text('C', 1))
+        svc.add_path('/Status', 0)   # 0 = OK
+        svc.add_path('/TemperatureType', self.ui.get('/Sensor/TemperatureType', self.TYPE_WATER_HEATER),
+                     writeable=True, onchangecallback=self._on_type)
+        if needs_register:
+            svc.register()
+        log.info('Registered %s on D-Bus (monitor only)', name)
+
+    def _on_type(self, path, value):
+        ok = isinstance(value, int) and not isinstance(value, bool) and value in self.TYPES
+        if ok:
+            self.ui.set('/Sensor/TemperatureType', value)
+        else:
+            log.warning('Rejected D-Bus write %s = %r', path, value)
+        return ok
+
+    def refresh(self, temperature, online):
+        self.svc['/Temperature'] = temperature   # None (shown as ---) while the D1 is silent
+
+
+def private_bus():
+    """Its own connection to the system D-Bus, or None where there is no D-Bus (the tests)."""
+    try:
+        import dbus
+    except ImportError:
+        return None
+    if 'DBUS_SESSION_BUS_ADDRESS' in os.environ:
+        return dbus.SessionBus(private=True)
+    return dbus.SystemBus(private=True)
+
+
+# --------------------------------------------------------------------------- temperature unit
+
+GX_TEMPERATURE_UNIT = ('com.victronenergy.settings', '/Settings/System/Units/Temperature')
+TEMPERATURE_UNITS = {'c': 'C', 'celsius': 'C', 'f': 'F', 'fahrenheit': 'F'}
+
+
+def read_gx_setting(service, path):
+    """One value from another D-Bus service (used for the GX display settings)."""
+    import dbus
+    bus = dbus.SessionBus() if 'DBUS_SESSION_BUS_ADDRESS' in os.environ else dbus.SystemBus()
+    return bus.get_object(service, path).GetValue(dbus_interface='com.victronenergy.BusItem', timeout=2)
+
+
+class TemperatureUnit:
+    """The unit the web page shows temperatures in: 'F' or 'C'.
+
+    [web] temperature_unit = auto follows the GX's own setting (Settings > General > Display &
+    Appearance > Data units > Temperature), which the GX screen and VRM already use for the
+    driver's readings. Fahrenheit or celsius in config.ini forces one. When auto can't read the
+    GX setting (on a PC, or with --no-dbus) the page shows Fahrenheit.
+    """
+    FALLBACK = 'F'
+    READ_EVERY = 10.0   # seconds; a change on the GX shows on the page within this time
+
+    def __init__(self, configured, reader=None):
+        text = (configured or 'auto').strip().lower()
+        self.forced = TEMPERATURE_UNITS.get(text)
+        if self.forced is None and text != 'auto':
+            log.warning('[web] temperature_unit = %s not understood (use auto, fahrenheit or celsius); '
+                        'using auto', configured)
+        self.reader = None if self.forced else reader
+        self.unit = self.forced or self.FALLBACK
+        self._next_read = 0.0
+
+    def poll(self, now=None):
+        if self.reader is None:
+            return
+        now = time.monotonic() if now is None else now
+        if now < self._next_read:
+            return
+        self._next_read = now + self.READ_EVERY
+        try:
+            value = str(self.reader(*GX_TEMPERATURE_UNIT)).strip().lower()
+        except Exception as e:   # settings service restarting, or no D-Bus: keep the last unit
+            log.debug('GX temperature unit not readable: %s', e)
+            return
+        if value in TEMPERATURE_UNITS:
+            self.unit = TEMPERATURE_UNITS[value]
+
+
 # --------------------------------------------------------------------------- web page
 
 class WebApp:
-    def __init__(self, cfg, telemetry, history):
+    def __init__(self, cfg, telemetry, history, temperature_unit=None, temperature_watch=None):
         self.telemetry = telemetry
+        self.temperature_watch = temperature_watch or TemperatureWatch(cfg)
+        self.temperature_unit = temperature_unit or TemperatureUnit(cfg['web']['temperature_unit'])
         self.history = history
         self.name = cfg['dbus']['custom_name']
         self.can_cfg = cfg['can']   # live: shows the port "auto" found
@@ -790,16 +1002,24 @@ class WebApp:
     def status(self):
         snap = self.telemetry.snapshot()
         e = snap['electric']
+        watch = self.temperature_watch
+        watch.update(snap)
+        temperature_text = watch.text(self.temperature_unit.unit)
+        alarms = nc.alarm_texts(snap['parameter']) + ([temperature_text] if temperature_text else [])
         return {
             'name': self.name,
             'interface': self.can_cfg['interface'],
             'driver_version': VERSION,
             'monitor_only': True,
+            'temperature_unit': self.temperature_unit.unit,
             'online': snap['online'],
             'electric': e,
             'power': {'lv': power(e, 'lv'), 'hv': power(e, 'hv')},
             'parameter': snap['parameter'],
-            'alarms': nc.alarm_texts(snap['parameter']),
+            'alarms': alarms,
+            'temperature_level': watch.level,
+            'temperature_limits': {'warning': watch.warning, 'alarm': watch.alarm,
+                                   'derate': D1_DERATE_C, 'shutdown': D1_SHUTDOWN_C},
             'version': snap['version'],
             'rx_age': {'0x%03X' % k: None if a is None else round(a, 2)
                        for k, a in snap['ages'].items()},
@@ -811,6 +1031,7 @@ class WebApp:
         minutes = min(int(m.group(1)), 24 * 60) if m else 60
         return {
             'interval': self.history.interval,
+            'temperature_unit': self.temperature_unit.unit,
             'fields': History.FIELDS,
             'points': self.history.points(minutes * 60),
         }
@@ -1081,10 +1302,13 @@ def main():
     watcher = StatusWatcher(interface)
 
     dbus_service = None
+    temperature_watch = TemperatureWatch(cfg)
+    temperature_unit = TemperatureUnit(cfg['web']['temperature_unit'],
+                                       None if args.no_dbus else read_gx_setting)
     if not args.no_dbus:
         from dbus.mainloop.glib import DBusGMainLoop
         DBusGMainLoop(set_as_default=True)
-        dbus_service = DbusService(cfg, UiSettings(os.path.join(BASE_DIR, ui_file)))
+        dbus_service = DbusService(cfg, UiSettings(os.path.join(BASE_DIR, ui_file)), temperature_watch)
 
     if args.simulate:
         bus = SimulatedD1()
@@ -1095,12 +1319,14 @@ def main():
     watcher.bus = bus
     start_thread('can-rx', rx_worker, bus, telemetry)
     if cfg['web'].getint('port'):
-        start_web(cfg, WebApp(cfg, telemetry, history))
+        start_web(cfg, WebApp(cfg, telemetry, history, temperature_unit, temperature_watch))
 
     def tick():
         snap = telemetry.snapshot()
         watcher(snap)
         history.tick()
+        temperature_unit.poll()
+        temperature_watch.update(snap)
         if dbus_service is not None:
             dbus_service.refresh(snap)
 

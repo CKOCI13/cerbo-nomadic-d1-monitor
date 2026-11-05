@@ -108,6 +108,7 @@ class WebApiTest(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertTrue(st['online'])
         self.assertTrue(st['monitor_only'])
+        self.assertEqual(st['temperature_unit'], 'F')   # no D-Bus here: Fahrenheit
         self.assertEqual(st['power'], {'lv': 272, 'hv': -256})
         self.assertEqual(st['alarms'][0], 'CAN loss')   # most serious first
         self.assertNotIn('control', st)
@@ -117,6 +118,7 @@ class WebApiTest(unittest.TestCase):
         h = json.loads(body)
         self.assertEqual(code, 200)
         self.assertEqual(h['fields'][0], 'time')
+        self.assertEqual(h['temperature_unit'], 'F')
         self.assertEqual(h['points'][0][:2], [1000, 13.6])
 
     def test_everything_but_reading_is_refused(self):

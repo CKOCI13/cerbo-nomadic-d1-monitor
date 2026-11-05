@@ -123,7 +123,10 @@ Edit `config.ini`:
   `--scan` reported. Names differ between models: `can0`/`can1`, or `vecan0`/`vecan1` on the Cerbo GX MK2
 * `custom_name`: the name on the GX and in VRM (default "DC-DC D1")
 * `password`: optional, for the web page
+* `temperature_unit`: `auto` (the Cerbo's own setting), `fahrenheit` or `celsius`, for the web page
 * `switch_pane = no` if you don't want the cards on the GX screen and in VRM
+* `[temperature]`: `warning` (default 100 °C / 212 °F) and `alarm` (105 °C / 221 °F), in °C; `sensor = no` to
+  leave out the temperature sensor, `sensor_instance` (default 71) for its device instance
 
 ## 7. Install as a service
 
@@ -156,7 +159,7 @@ Three cards appear. All items are read-only.
 |---|---|---|
 | **DC-DC D1** | Alarm | The most serious active alarm, or None. The tile turns red ("Fault") on a fault, and "N active" appears when there are several |
 | | Status | The converter's operating mode (Standby, Autonomous, Buck, Boost, Derating…), or "No communication" |
-| | Temperature | Power board temperature, in your GX temperature unit |
+| | Temperature | Power board temperature, in your GX temperature unit (°F or °C, see below) |
 | | Precharge status *(hidden)* | In progress / Not active. Hidden because the D1 manual doesn't use precharge; show it from the device page |
 | **DC-DC D1 12 V side** | Current, Power, Voltage | LV side. Power = V × A |
 | **DC-DC D1 48 V side** | Current, Power, Voltage | HV side |
@@ -202,9 +205,30 @@ publishes, and this one publishes none, so nothing is ever sent (and the D1 has 
 With a Victron Multi or Quattro under DVCC, the D1's charge current is subtracted from what the Multi may charge,
 as for any alternator.
 
-The D1's temperature is its own, so it isn't published as `/Dc/0/Temperature` (which the GX would label
-"Battery temperature" or "Alternator temperature"). The switch pane and the web page show it.
 There's no on/off switch on its page.
+
+### Temperature
+
+The D1 reports its **internal power-board** temperature. From the D1 manual (Rev D, section IV.B): full output up
+to 105 °C (221 °F), current derated in a straight line from 100 % to 0 % between 105 and 120 °C (221–248 °F),
+conversion stopped with a fault above 120 °C (248 °F). A D1 boosting about 1.7 kW read 82 °C (180 °F) in the first
+real test, so readings around there are normal.
+
+Where it appears:
+
+| Where | How |
+|---|---|
+| Overview, Alternator tile | `/Dc/0/Temperature`, top right of the tile (`service_class = alternator` only) |
+| Device page | "Alternator temperature" (Victron's wording). As `dcdc` the page would say "Battery temperature", so it isn't published there |
+| Levels › Environment, device list, Brief page centre, relay temperature control, VRM | A second service, `com.victronenergy.temperature.nomadic_<interface>` (device instance `sensor_instance`, default 71), named `custom_name`, type **Water heater**: the only GX gauge scale (0–100 °C, 32–212 °F) that takes in a working D1; Generic stops at 60 °C (140 °F). The type can be changed on its page and is kept |
+| Switch pane, VRM Switches | The Temperature item; the Alarm item names the monitor's warning or alarm after the D1's own alarms |
+| Web page | The reading, OK / Warning / Alarm, the message in Active alarms, and the chart |
+
+**Warning and alarm.** The D1 doesn't report anything before it derates, so the monitor raises its own levels from
+`[temperature] warning` and `alarm` (°C, defaults 100 and 105): `/Alarms/HighTemperature` is 1 (warning) or 2
+(alarm). For an alternator the GX's notification system turns that into a **High Temperature** notification on the
+screen and in VRM; Victron has no such alarm for `dcdc`, so there only the switch pane and the web page show it.
+Each level clears 3 °C below where it came on. No reading (converter silent) clears it.
 
 ### D-Bus / MQTT / Node-RED
 
@@ -215,6 +239,8 @@ Every value path is read-only.
 |---|---|
 | `/Dc/0/Voltage`, `/Dc/0/Current`, `/Dc/0/Power` | Output side (V, A, W): HV side as an alternator, LV side as `dcdc`. + = into that battery |
 | `/Dc/In/V`, `/Dc/In/I`, `/Dc/In/P` | Input side (V, A, W): the other side. + = from that side into the converter |
+| `/Dc/0/Temperature` | Board temperature (°C; the GX converts it to your unit). Alternator only |
+| `/Alarms/HighTemperature` | 0 ok, 1 warning, 2 alarm (from `[temperature]`) |
 | `/State` | 0 off, 2 fault, 11 regulating, 245 starting |
 | `/Nomadic/Online` | 1 while frames are arriving |
 | `/Nomadic/OperatingMode`, `/Nomadic/OperatingModeText` | Raw DCDC_OPERATING_MODE and its text |
@@ -222,12 +248,13 @@ Every value path is read-only.
 | `/Nomadic/FaultStatus`, `/Nomadic/Faults`, `/Nomadic/VoltageStatus`, `/Nomadic/LoadStatus` | Raw bitfields |
 | `/Nomadic/Alarms` | All active bits as text, `;`-separated |
 | `/Nomadic/SoftwareVersion` | BCD software version, e.g. `1.2.3` |
+| temperature service: `/Temperature`, `/TemperatureType` | Board temperature (°C) and sensor type (5 = water heater; the only writable path) |
 | `/GenericInput/<item>/...` | The switch-pane items above ([Victron switch API](https://github.com/victronenergy/venus/wiki/dbus#switch)). Only their `/Settings/CustomName`, `/Settings/Group` and `/Settings/ShowUIInput` are writable |
 
 ## Trying it without a converter
 
 `dbus-nomadic-dcdc.py --simulate` (Cerbo Setup option 9) runs the monitor against a pretend D1 and never opens a
-CAN socket. It registers separately (`com.victronenergy.<service_class>.nomadic_sim`, device instance + 1, name
+CAN socket. It registers separately (`com.victronenergy.<service_class>.nomadic_sim`, device instances + 1, name
 "… (SIMULATED)", web page on port 8089, `ui-sim.json`), so it can run beside a real installation. The pretend D1
 follows the manual's automatic logic, with a 12 V side that alternates between a load and a charging source, so
 buck, standby and boost all show up within a few minutes. Add `--no-dbus` to run it on any PC.

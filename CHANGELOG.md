@@ -5,13 +5,22 @@ What changed in each version of the driver (`VERSION` in `dbus-nomadic-dcdc/dbus
 This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3.0 (with control) were developed
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
+## 2.3.0 (2026-11-05)
+
+The D1's temperature is one of its main operating readings, so it's back on every Cerbo screen, with warnings.
+
+- **On every screen.** The Overview page's Alternator tile shows it (top right), and the device page lists it as "Alternator temperature" (Victron's wording for an alternator). The D1 also appears as a **temperature sensor** named "DC-DC D1": a gauge on **Levels › Environment**, an entry in the device list, a choice for the Brief page's centre circle, and an input for a Cerbo relay's temperature control. Its type is **Water heater** because that is the only gauge scale (32–212 °F) that covers a working D1, which read 180 °F while boosting in the first real test; the Generic gauge stops at 140 °F. With `service_class = dcdc` the device page would call it "Battery temperature", so it is left off that page only.
+- **Warning and alarm.** The D1 says nothing until it starts derating, so the monitor warns first. From the D1 manual (Rev D, IV.B): full output up to 221 °F (105 °C), derating 221–248 °F, fault above 248 °F (120 °C). Defaults: **warning at 212 °F (100 °C)**, **alarm at 221 °F (105 °C)**, in a new `[temperature]` part of `config.ini`. The Cerbo shows a **High Temperature** notification (and passes it to VRM), the switch pane's Alarm item names it ("Temperature high" / "Temperature very high", red at the alarm), and the web page shows the level and a message. Each clears 5 °F (3 °C) below where it came on.
+- **Fahrenheit** (from the 2.1.3 update that hadn't been merged yet). The web page shows temperatures in the unit set on the Cerbo (**Settings → General → Display & Appearance → Data units → Temperature**), the same unit the Cerbo screen and VRM use. The live reading, chart and history table follow it. `temperature_unit = fahrenheit` or `celsius` in `[web]` forces one; on a PC (`--simulate` or `--no-dbus`) the page shows °F. The Safe Test Plan, "How it works" and the Cerbo pictures give °F first.
+- New tests: `tests/test_temperature_levels.py`, `tests/test_temperature_unit.py`.
+
 ## 2.2.0 (2026-11-04)
 
 From the first test on real hardware (Cerbo GX, Venus OS v3.85, a D1 boosting from a running engine):
 
 - **Shown as an alternator by default** (`service_class = alternator`). Victron's system calculation leaves DC-DC converters out of its sums, so the Cerbo's **DC Loads** figure went negative (−1,413 W) while the D1 charged the Lithionics battery. As an alternator, the D1's power into or out of the 48 V battery is counted, and the D1 gets its own **tile on the Overview page**: + watts while it charges the 48 V battery, − watts while it powers the 12 V side from it. Its device page now shows the 48 V side as Output and the 12 V side as Input. Nothing is sent to the D1: the service has no `/Link/*` paths, so DVCC writes nothing. `service_class = dcdc` gives the old listing.
 - **Direction from the operating mode.** While boosting, the D1 reported both currents as positive (13.0 V / 132 A on the 12 V side, 54.2 V / 30 A on the 48 V side), so the web page's flow arrow pointed the wrong way and the device page couldn't tell the directions apart. While the D1 says it's boosting or bucking, the monitor now sets the signs from that (+ = into that battery) everywhere: D-Bus, switch pane, web page and history. The values as received are kept as `lv_current_reported` / `hv_current_reported` in `/api/status`.
-- **No more "Battery temperature".** The D1's own temperature was published as `/Dc/0/Temperature`, which the device page labelled "Battery temperature". It's left out there now; the switch pane and web page still show it.
+- **No more "Battery temperature".** The D1's own temperature was published as `/Dc/0/Temperature`, which the device page labelled "Battery temperature". It's left out there now; the switch pane and web page still show it. (2.3.0 brings it back on the alternator's page and tile.)
 - New tests (`tests/test_direction.py`) use the readings from that test. README "Project status" updated with what the real hardware showed.
 
 ## 2.1.3 (2026-11-04)

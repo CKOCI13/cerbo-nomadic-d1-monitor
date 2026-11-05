@@ -203,7 +203,7 @@ Alarms: none
 Software 1.2.3  Hardware 5</pre>
 <div class="step"><div class="id">5f</div><div><b>Type <code>4</code>: install.</b> After about 10 seconds you should see:</div></div>
 <pre>/service/dbus-nomadic-dcdc: up (pid 1834) 6 seconds
-... INFO: Nomadic DC-DC monitor 2.1.2 starting on auto (monitor only: nothing is transmitted)
+... INFO: Nomadic DC-DC monitor 2.3.0 starting on auto (monitor only: nothing is transmitted)
 ... INFO: Converter online on can1</pre>
 <p><b>Done!</b> It now starts by itself after every reboot and firmware update.</p>
 <h3>No network to the Cerbo? Install from a USB stick instead</h3>
@@ -228,9 +228,9 @@ Software 1.2.3  Hardware 5</pre>
 <img src="../images/cerbo-readings.png" style="width:92%">
 <table>
   <tr><th>Card</th><th>Item</th><th>Shows</th></tr>
-  <tr><td rowspan="3"><b>DC-DC D1</b></td><td>Alarm</td><td>The most serious active alarm, or None. The tile turns red on a fault, and "N active" appears when there are several</td></tr>
+  <tr><td rowspan="3"><b>DC-DC D1</b></td><td>Alarm</td><td>The most serious active alarm, or None (the D1's own alarms first, then the monitor's temperature warning). The tile turns red on a fault or a temperature alarm, and "N active" appears when there are several</td></tr>
   <tr><td>Status</td><td>What the D1 says it's doing: Standby, Autonomous, Buck, Boost, Derating (hot)… or <b>No communication</b></td></tr>
-  <tr><td>Temperature</td><td>The D1's power board temperature, in your Cerbo's temperature unit</td></tr>
+  <tr><td>Temperature</td><td>The D1's power board temperature, in your Cerbo's temperature unit. For °F choose Fahrenheit at <b>Settings › General › Display &amp; Appearance › Data units › Temperature</b></td></tr>
   <tr><td><b>DC-DC D1 12 V side</b><br><b>DC-DC D1 48 V side</b></td><td>Current, Power, Voltage</td><td>Live readings for that battery side. <b>+</b> means energy going into that battery, <b>−</b> coming out (see below)</td></tr>
 </table>
 <p>To rename, move or hide any item, go to <b>Settings › Devices › DC-DC D1</b>. A hidden <b>Precharge status</b> item is there too (the D1 manual doesn't use precharge).
@@ -238,6 +238,26 @@ Software 1.2.3  Hardware 5</pre>
 <h3>On the Overview page</h3>
 <p>The D1 has an <b>Alternator</b> tile: <b>+</b> watts while it charges the 48 V battery, <b>−</b> while it powers the 12 V side from it.
 Listing it as an alternator keeps the Cerbo's <b>DC Loads</b> figure right. Nothing is sent to the D1. For no tile, set <code>service_class = dcdc</code>.</p>
+
+<h3>The D1's temperature, on every screen</h3>
+<p>The temperature is the D1's <b>internal power board</b>, the same sensor the D1 uses to protect itself. It runs well above the air around it: about 180 °F while boosting about 1.7 kW is normal.</p>
+<table>
+  <tr><th>Where</th><th>What you see</th></tr>
+  <tr><td>Overview page</td><td>Top right of the <b>Alternator</b> tile</td></tr>
+  <tr><td>Device page (Settings › Devices › DC-DC D1)</td><td><b>Alternator temperature</b> (Victron's fixed wording)</td></tr>
+  <tr><td>Levels › Environment</td><td>A gauge named <b>DC-DC D1</b>, 32–212 °F. Its sensor type is <b>Water heater</b>, the only type whose scale covers the D1's working range</td></tr>
+  <tr><td>Brief page</td><td>Can show it in the centre circle: Settings › General › Display &amp; Appearance › Brief page › Center details</td></tr>
+  <tr><td>Relays</td><td>A Cerbo relay set to the <b>Temperature</b> function can switch a fan or light on its reading (Settings › Relay › Temperature control rules)</td></tr>
+  <tr><td>Switch pane, web page, VRM</td><td>Temperature item; the web page also says OK / Warning / Alarm</td></tr>
+</table>
+<table>
+  <tr><th>Board temperature</th><th>D1 (manual Rev D, section IV.B)</th><th>Monitor</th></tr>
+  <tr><td>up to 212 °F (100 °C)</td><td>Full output</td><td>OK</td></tr>
+  <tr><td>212–221 °F (100–105 °C)</td><td>Full output</td><td><b>Warning</b>: High Temperature notification, Alarm card "Temperature high"</td></tr>
+  <tr><td>221–248 °F (105–120 °C)</td><td>Cuts its current back, from 100 % to 0 %; status "Derating (hot)"</td><td><b>Alarm</b>: notification, red Alarm card</td></tr>
+  <tr><td>above 248 °F (120 °C)</td><td>Stops and reports a fault</td><td>The D1's own fault on the Alarm card</td></tr>
+</table>
+<p>The levels are in the <code>[temperature]</code> part of config.ini, in °C. Each clears 5 °F (3 °C) below where it came on. Air around the D1: full power up to 140 °F (60 °C); the manual asks for airflow along the heatsink fins while it works.</p>
 
 <div class="cols page">
   <div>
