@@ -40,7 +40,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.1.2'
+VERSION = '2.1.3'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -251,6 +251,14 @@ class StatusWatcher:
 
 # --------------------------------------------------------------------------- CAN input
 
+# Linux SocketCAN constants (linux/can.h), written out here instead of taken from Python's socket
+# module: on 32-bit Python, as on the Cerbo GX, socket.CAN_EFF_FLAG is a negative number
+# (-2147483648), which struct.pack('=I') refuses, so the monitor crashed as soon as it opened a port.
+CAN_SFF_MASK = 0x000007FF   # standard (11-bit) ID bits
+CAN_EFF_FLAG = 0x80000000   # extended (29-bit) frame
+CAN_RTR_FLAG = 0x40000000   # remote request frame
+
+
 class CanBus:
     """Receive-only SocketCAN access: one socket, filtered to the converter's three messages.
 
@@ -263,7 +271,7 @@ class CanBus:
         self.interface = interface
         s = socket.socket(socket.PF_CAN, socket.SOCK_RAW, socket.CAN_RAW)
         # Standard-ID data frames with exactly these IDs.
-        mask = socket.CAN_SFF_MASK | socket.CAN_EFF_FLAG | socket.CAN_RTR_FLAG
+        mask = CAN_SFF_MASK | CAN_EFF_FLAG | CAN_RTR_FLAG
         filters = b''.join(struct.pack('=II', i, mask) for i in nc.RX_IDS)
         try:
             s.setsockopt(socket.SOL_CAN_RAW, socket.CAN_RAW_FILTER, filters)
@@ -280,7 +288,7 @@ class CanBus:
         except socket.timeout:
             return None
         can_id, dlc, data = self.FRAME.unpack(raw)
-        return can_id & socket.CAN_SFF_MASK, data[:dlc]
+        return can_id & CAN_SFF_MASK, data[:dlc]
 
     def close(self):
         self._rx.close()
