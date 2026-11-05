@@ -64,6 +64,10 @@ New to all this? **[How it works, in plain English](docs/how-it-works.md)** expl
   12 V side and its 48 V side.
 - **On the Overview page:** an Alternator tile with the power going into the 48 V battery (minus while the D1 takes
   power from it for the 12 V side). The D1 is listed as an alternator so the Cerbo's DC Loads figure stays right.
+- **The D1's temperature on every screen:** the Overview tile, the device page, a gauge on Levels › Environment
+  (it's also listed as a temperature sensor), the switch pane, VRM and the web page. The D1 doesn't warn before it
+  gets hot enough to cut back its power (221 °F), so the monitor does: a Cerbo **High Temperature** notification
+  at 212 °F and an alarm at 221 °F, both adjustable.
 - **Everywhere Victron does:** Remote Console, the VRM portal and app, MQTT and Node-RED.
 - **Its own web page** at `http://<cerbo-address>:8088`. Any tablet (Android or iPad), phone or laptop on the same
   network can open it. It shows live values, which way the energy is flowing, and charts of the last 24 hours.
@@ -188,8 +192,11 @@ Every change is tested automatically by GitHub ([the tests badge](#cerbo-nomadic
   operating mode (boost or buck), not from the sign. The values as sent are kept in the web page's
   `/api/status` (`lv_current_reported`, `hv_current_reported`).
 - That first test found a crash on the Cerbo's 32-bit Python, fixed in 2.1.3.
+- The D1's board temperature reached **180 °F (82 °C)** while boosting, with no fault: well inside its full-output
+  range (up to 221 °F). Its case read about 135 °F.
 
-**Not yet seen on real hardware:** bucking (48 V to 12 V) and the D1's alarms.
+**Not yet seen on real hardware:** bucking (48 V to 12 V), the D1's alarms, and the temperature sensor, gauge and
+warnings added in 2.3.0.
 
 If you try it, please share what you find in an [issue](../../issues).
 

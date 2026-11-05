@@ -108,7 +108,8 @@ class DbusTest(unittest.TestCase):
         self.assertEqual(self.svc['/Dc/0/Power'], -256)
         self.assertEqual(self.svc['/Dc/In/V'], 13.6)
         self.assertEqual(self.svc['/Dc/In/P'], -272)
-        self.assertNotIn('/Dc/0/Temperature', self.svc.paths)   # it's the D1's, not a battery's
+        self.assertEqual(self.svc['/Dc/0/Temperature'], 35)   # alternator: Overview tile + device page
+        self.assertEqual(self.svc['/Alarms/HighTemperature'], 0)
         self.assertEqual(self.svc['/FirmwareVersion'], 0x123)
         self.assertEqual(self.svc['/Nomadic/SoftwareVersion'], '1.2.3')
         self.assertEqual(self.svc['/State'], 11)
