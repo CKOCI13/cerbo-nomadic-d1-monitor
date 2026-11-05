@@ -230,6 +230,11 @@ Where it appears:
 screen and in VRM; Victron has no such alarm for `dcdc`, so there only the switch pane and the web page show it.
 Each level clears 3 °C below where it came on. No reading (converter silent) clears it.
 
+**Fahrenheit or Celsius:** the Cerbo screen, VRM and the web page all show the temperature in the unit set on the
+Cerbo, at **Settings → General → Display & Appearance → Data units → Temperature**. Choose **Fahrenheit** there for
+°F. `temperature_unit` in the `[web]` part of `config.ini` can force the web page to `fahrenheit` or `celsius`
+instead; on a PC (`--simulate` or `--no-dbus`) the page shows °F.
+
 ### D-Bus / MQTT / Node-RED
 
 Service: `com.victronenergy.<service_class>.nomadic_<interface>`, so `com.victronenergy.alternator.nomadic_auto` with the defaults (MQTT: `N/<portal-id>/alternator/<device_instance>/...`).
