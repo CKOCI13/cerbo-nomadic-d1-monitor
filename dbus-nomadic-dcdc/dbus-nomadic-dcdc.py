@@ -40,7 +40,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.4.0'
+VERSION = '2.4.1'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -574,7 +574,8 @@ NO_COMMUNICATION = 16   # extra entry after the 16 operating modes
 SHORT_MODES = {0x1: 'Starting up', 0x2: 'Standby', 0x3: 'Boost 12V to 48V', 0x4: 'Buck 48V to 12V',
                0x5: 'Autonomous', 0x7: 'Shutting down', 0x8: 'Derating (hot)', 0xF: 'Invalid'}
 MODE_LABELS = [SHORT_MODES.get(m, 'Reserved') for m in range(16)] + ['No communication']
-PRECHARGE_LABELS = ['Reserved', 'In progress', 'Not active', 'Invalid']
+# 0 is "Reserved" in the CAN document; the D1/D2 send it because they don't use precharge.
+PRECHARGE_LABELS = ['Not used', 'In progress', 'Not active', 'Invalid']
 # After the D1's own alarms: the monitor's temperature levels ([temperature] in config.ini)
 TEMP_ALARM_LABELS = ['Temperature high (warning)', 'Temperature very high (alarm)']
 ALARM_LABELS = ['None'] + [text for _, _, text in nc.ALARMS] + TEMP_ALARM_LABELS
@@ -585,6 +586,9 @@ ALARM_LABELS = ['None'] + [text for _, _, text in nc.ALARMS] + TEMP_ALARM_LABELS
 #   (channel, name on its card, type, unit, decimals, labels, card)
 # card None = the device's own card; 'lv' / 'hv' = "<custom_name> 12 V side" / "48 V side".
 CARDS = {'lv': '%s 12 V side', 'hv': '%s 48 V side'}
+# VRM's Inputs page ignores the cards and lists "<custom name>: <name>", so each side's items
+# get a /Name that says which side ("Current: 12 V current"); the cards show the custom name.
+SIDES = {'lv': '12 V', 'hv': '48 V'}
 INPUTS = (
     ('alarm', 'Alarm', INPUT_DISCRETE, None, None, ALARM_LABELS, None),
     ('status', 'Status', INPUT_DISCRETE, None, None, MODE_LABELS, None),
@@ -772,7 +776,7 @@ class DbusService:
     def _add_input(self, device_name, channel, name, input_type, unit, decimals, labels, card):
         base = '/GenericInput/' + channel
         add = self.svc.add_path
-        add(base + '/Name', name)
+        add(base + '/Name', '%s %s' % (SIDES[card], name.lower()) if card else name)
         add(base + '/Value', None)
         add(base + '/Status', 0)
         add(base + '/Settings/Type', input_type)
