@@ -51,7 +51,7 @@ OPERATING_MODES = {
 }
 
 PRECHARGE_STATUSES = {
-    0x0: 'Reserved',
+    0x0: 'Not used',   # "Reserved" in the CAN document; sent because precharge isn't used
     0x1: 'Precharge in process',
     0x2: 'Precharge not in process',
     0x3: 'Invalid signal',

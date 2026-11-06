@@ -224,6 +224,16 @@ Where it appears:
 | Switch pane, VRM Switches | The Temperature item; the Alarm item names the monitor's warning or alarm after the D1's own alarms |
 | Web page | The reading, OK / Warning / Alarm, the message in Active alarms, and the chart |
 
+**DVCC temperature sensor.** Victron's `dbus-systemcalc-py` (`delegates/batterysense.py`) offers every alternator
+with a `/Dc/0/Temperature` under Settings › DVCC › Temperature sensor, so the D1 appears there as "None on CAN
+vecan1 (monitor only)" (systemcalc doesn't read an alternator's `/ProductName`). Leave that setting on "No sensor"
+or the battery: chosen, the D1's board temperature would be shared with the chargers as the battery temperature.
+"Automatic" only uses the battery service. The temperature service is only offered with type Battery (0), which is
+why it uses Water heater.
+
+**VRM's Inputs page** lists the switch-pane items as "<custom name>: <name>" without the cards, so each side's
+items have a `/Name` that says the side ("Current: 12 V current"); the Cerbo's cards show the custom name.
+
 **Warning and alarm.** The D1 doesn't report anything before it derates, so the monitor raises its own levels from
 `[temperature] warning` and `alarm` (°C, defaults 100 and 105): `/Alarms/HighTemperature` is 1 (warning) or 2
 (alarm). For an alternator the GX's notification system turns that into a **High Temperature** notification on the

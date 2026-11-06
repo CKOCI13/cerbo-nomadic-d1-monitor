@@ -203,7 +203,7 @@ Alarms: none
 Software 1.2.3  Hardware 5</pre>
 <div class="step"><div class="id">5f</div><div><b>Type <code>4</code>: install.</b> After about 10 seconds you should see:</div></div>
 <pre>/service/dbus-nomadic-dcdc: up (pid 1834) 6 seconds
-... INFO: Nomadic DC-DC monitor 2.4.0 starting on auto (monitor only: nothing is transmitted)
+... INFO: Nomadic DC-DC monitor 2.4.1 starting on auto (monitor only: nothing is transmitted)
 ... INFO: Converter online on can1</pre>
 <p><b>Done!</b> It now starts by itself after every reboot and firmware update.</p>
 <h3>No network to the Cerbo? Install from a USB stick instead</h3>
@@ -258,6 +258,8 @@ Listing it as an alternator keeps the Cerbo's <b>DC Loads</b> figure right. Noth
   <tr><td>above 248 °F (120 °C)</td><td>Stops and reports a fault</td><td>The D1's own fault on the Alarm card</td></tr>
 </table>
 <p>The levels are in the <code>[temperature]</code> part of config.ini, in °C. Each clears 5 °F (3 °C) below where it came on. Air around the D1: full power up to 140 °F (60 °C); the manual asks for airflow along the heatsink fins while it works.</p>
+<div class="panel red"><b>DVCC temperature sensor: leave it on "No sensor" or your battery.</b> Under Settings › DVCC › Temperature sensor the Cerbo also lists the D1 as <b>"None on CAN vecan1 (monitor only)"</b>, because Victron offers any alternator that reports a temperature. Don't choose it: the chargers would treat the D1's board temperature as the battery's. "Automatic" never picks it. The DC-DC D1 temperature sensor is not offered there (its type is Water heater); don't change its type to Battery.</div>
+
 
 <div class="cols page">
   <div>

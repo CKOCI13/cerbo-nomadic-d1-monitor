@@ -79,6 +79,13 @@ class DbusTest(unittest.TestCase):
             self.assertEqual(group(ch), 'DC-DC D1 48 V side')
         # On a named card the GUI would prefix the device name without a custom name
         self.assertEqual((name('lv_voltage'), name('hv_power')), ('Voltage', 'Power'))
+        # VRM's Inputs page lists "<custom name>: <name>" without the cards, so /Name says the side
+        plain = lambda ch: self.svc['/GenericInput/%s/Name' % ch]
+        self.assertEqual((plain('lv_current'), plain('hv_current')), ('12 V current', '48 V current'))
+        self.assertEqual((plain('lv_voltage'), plain('hv_power')), ('12 V voltage', '48 V power'))
+        self.assertEqual(plain('temperature'), 'Temperature')
+        # precharge 0 ("Reserved" in the CAN document) reads "Not used"
+        self.assertEqual(driver.PRECHARGE_LABELS[0], 'Not used')
         # precharge is hidden by default (the D1 manual doesn't use it)
         self.assertEqual(self.svc['/GenericInput/precharge_status/Settings/ShowUIInput'], 0)
         self.assertEqual(self.svc['/GenericInput/lv_voltage/Settings/ShowUIInput'],

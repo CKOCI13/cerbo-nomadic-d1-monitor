@@ -5,6 +5,14 @@ What changed in each version of the driver (`VERSION` in `dbus-nomadic-dcdc/dbus
 This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3.0 (with control) were developed
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
+
+## 2.4.1 (2026-11-05)
+
+From the first look at the D1 on VRM:
+
+- **VRM's Inputs page tells the two sides apart.** It listed "Current: Current", "Voltage: Voltage" and "Power: Power" twice each, because it ignores the Cerbo's "12 V side" / "48 V side" cards. Each item now reads "Current: 12 V current", "Current: 48 V current" and so on. The Cerbo's cards are unchanged.
+- **Precharge status reads "Not used"** instead of "Reserved" (the CAN document's name for the 0 the D1 sends, as it doesn't use precharge). It's hidden on the Cerbo screen; VRM shows it.
+- **Docs: DVCC temperature sensor.** The Cerbo offers the D1 as a DVCC temperature sensor ("None on CAN vecan1 (monitor only)"). The Installation Guide and driver README now say to leave that on "No sensor" or the battery, so the board temperature is never shared as the battery's.
 ## 2.4.0 (2026-11-05)
 
 - **A summary tile at the top of the web page**, styled like the Cerbo's Overview **Battery** tile: the watts (the same figure as the Overview's Alternator tile: + while charging the 48 V battery, − while powering the 12 V side), **Buck** or **Boost**, the 12 V and 48 V sides' **volts** and **amps**, and the **temperature** (top right, orange at the warning, red at the alarm). It has the Battery tile's blue and its rising shimmer while energy is flowing (still when the device asks for reduced motion). Victron's Overview tiles can't be changed by a driver, so this is the place for it.
