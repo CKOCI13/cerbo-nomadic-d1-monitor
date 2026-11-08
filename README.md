@@ -301,8 +301,9 @@ Plus means energy going into that battery, minus means coming out. In buck the 4
 12 V side is. See [Reading the numbers](docs/how-it-works.md#reading-the-numbers).
 
 **Why are the charts empty after a restart?**
-The history is kept in memory, so it starts again whenever the monitor or the Cerbo restarts. For long-term
-history, use VRM.
+The 24-hour charts are kept in memory, so they start again whenever the monitor or the Cerbo restarts. The
+running records (lowest/highest voltages and temperature, kWh each way, alarm counts) are saved and kept: see the
+D1's **History** page on the Cerbo, or the **Records** card on the web page. For long-term graphs, use VRM.
 
 **How do I remove it?**
 Run `Cerbo Setup.bat` and choose **8**. The D1 isn't affected.

@@ -9,6 +9,8 @@ Runs on a Victron GX device (Cerbo GX, Ekrano GX, ...) and:
     them on D-Bus, so they appear on the GX screen, in the device list, VRM, MQTT
     and Node-RED
   * keeps a 24-hour history of the readings for the charts on its web page
+  * keeps running records (lowest/highest voltages and temperature, kWh each way, hours
+    boosting and bucking, alarm counts) across restarts, for the GX's History page
   * serves a small read-only web page with live values, alarms and charts
 
 Usage:
@@ -40,7 +42,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.4.1'
+VERSION = '2.5.0'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -50,6 +52,8 @@ SYS_NET = '/sys/class/net'
 VERSION_FILE = '/opt/victronenergy/version'
 HISTORY_INTERVAL = 10.0               # seconds between history points
 HISTORY_POINTS = 24 * 3600 // 10      # 24 hours
+ENERGY_MAX_GAP = 1.0                  # s; a longer gap between readings is not counted as energy
+TOTALS_SAVE_INTERVAL = 300            # s between saves of the running records (and on stop)
 
 log = logging.getLogger('nomadic-dcdc')
 
@@ -115,6 +119,7 @@ def save_json(path, data):
 # --------------------------------------------------------------------------- telemetry
 
 ELECTRIC_FIELDS = ('lv_voltage', 'lv_current', 'hv_voltage', 'hv_current', 'temperature')
+ENERGY_KEYS = ('lv_charged', 'lv_drawn', 'hv_charged', 'hv_drawn')   # Wh
 
 MODE_BOOST = 0x3   # 12 V side -> 48 V side
 MODE_BUCK = 0x4    # 48 V side -> 12 V side
@@ -155,9 +160,11 @@ class Telemetry:
         self._counts = dict.fromkeys(nc.RX_IDS, 0)
         self._sums = dict.fromkeys(ELECTRIC_FIELDS, 0.0)
         self._samples = 0
+        self._energy = dict.fromkeys(ENERGY_KEYS, 0.0)
+        self._last_electric = None
         self.bad_frames = 0
 
-    def feed(self, can_id, data):
+    def feed(self, can_id, data, now=None):
         decode = self.DECODERS.get(can_id)
         if decode is None:
             return
@@ -165,16 +172,30 @@ class Telemetry:
             self.bad_frames += 1
             return
         value = decode(data)
+        now = time.monotonic() if now is None else now
         with self._lock:
             if can_id == nc.ID_ELECTRIC:
                 parameter = self._latest.get(nc.ID_PARAMETER, (None, None))[1]
                 value = orient(value, parameter)
-            self._latest[can_id] = (time.monotonic(), value)
+            self._latest[can_id] = (now, value)
             self._counts[can_id] += 1
             if can_id == nc.ID_ELECTRIC:
                 for k in ELECTRIC_FIELDS:
                     self._sums[k] += value[k]
                 self._samples += 1
+                # Energy: each reading's power over the time since the one before (100 a second)
+                if self._last_electric is not None and 0 < now - self._last_electric <= ENERGY_MAX_GAP:
+                    hours = (now - self._last_electric) / 3600
+                    for side in ('lv', 'hv'):
+                        w = value[side + '_voltage'] * value[side + '_current']
+                        self._energy[side + ('_charged' if w > 0 else '_drawn')] += abs(w) * hours
+                self._last_electric = now
+
+    def take_energy(self):
+        """Wh into (charged) and out of (drawn) each side's battery since the last call."""
+        with self._lock:
+            energy, self._energy = self._energy, dict.fromkeys(ENERGY_KEYS, 0.0)
+        return energy
 
     def take_averages(self):
         """Average of every electric reading since the last call, or None if none arrived."""
@@ -251,6 +272,155 @@ class History:
             start = points[-1][0] - seconds
             points = [p for p in points if p[0] >= start]
         return points
+
+
+# The D1's voltage warnings (DCDC_VoltageStatus bits), grouped the way the GX's History page counts them
+VOLTAGE_ALARM_BITS = {
+    'lv_low': 0b00000011,    # undervoltage / low voltage on the 12 V side
+    'lv_high': 0b00001100,   # high voltage / overvoltage on the 12 V side
+    'hv_low': 0b00110000,
+    'hv_high': 0b11000000,
+}
+# Modes in which the D1's readings aren't meaningful yet (or any more): not used for lowest/highest
+MODES_NOT_RUNNING = (0x0, 0x1, 0x7, 0xF)
+
+
+class Totals:
+    """Running records since the last reset, kept across restarts and reboots.
+
+    The GX's device page shows them under History (lowest/highest voltage on each side, lowest/
+    highest temperature, kWh each way, the D1's voltage warning counts) and the web page shows all
+    of them. "Clear History" on that page (or the web page's API) starts them again. Only the
+    monitor's own file changes; nothing is ever sent to the converter.
+    """
+
+    NUMBERS = ('lv_voltage_min', 'lv_voltage_max', 'hv_voltage_min', 'hv_voltage_max',
+               'temperature_min', 'temperature_max', 'lv_current_peak', 'hv_current_peak',
+               'boost_seconds', 'buck_seconds', 'derating_seconds', 'fault_events',
+               'temperature_warnings', 'temperature_alarms', 'last_fault_time') \
+        + ENERGY_KEYS + tuple(k + '_alarms' for k in VOLTAGE_ALARM_BITS)
+    TEXTS = ('last_fault',)
+    MAX_STEP = 5.0   # s; a longer pause between updates isn't counted as running time
+    FLOW_W = 20      # W on the 48 V side before the D1 counts as boosting or bucking
+
+    def __init__(self, path=None, save_interval=TOTALS_SAVE_INTERVAL):
+        self.path = path
+        self.save_interval = save_interval
+        self._lock = threading.Lock()
+        self._dirty = False
+        self._saved_at = None   # set by the first update
+        self._last = None
+        self._voltage_bits = 0
+        self._faulted = False
+        self._temperature_level = TEMP_OK
+        self._new()
+        if path:
+            self._load(load_json(path))
+
+    def _new(self):
+        self.values = dict.fromkeys(self.NUMBERS + self.TEXTS)
+        for k in ENERGY_KEYS + tuple(k + '_alarms' for k in VOLTAGE_ALARM_BITS) + (
+                'boost_seconds', 'buck_seconds', 'derating_seconds', 'fault_events',
+                'temperature_warnings', 'temperature_alarms'):
+            self.values[k] = 0
+        self.values['since'] = int(time.time())
+
+    def _load(self, data):
+        for k in self.NUMBERS + ('since',):
+            v = data.get(k)
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                self.values[k] = v
+        for k in self.TEXTS:
+            if isinstance(data.get(k), str):
+                self.values[k] = data[k]
+
+    def update(self, snap, energy=None, temperature_level=0, now=None):
+        """Call once a second with the latest snapshot and the energy since the last call."""
+        now = time.monotonic() if now is None else now
+        e, p = snap['electric'], snap['parameter']
+        with self._lock:
+            v = self.values
+            step = 0 if self._last is None else now - self._last
+            self._last = now
+            if self._saved_at is None:
+                self._saved_at = now
+            if energy:
+                for k in ENERGY_KEYS:
+                    if energy.get(k):
+                        v[k] += energy[k]
+                        self._dirty = True
+            mode = p and p['operating_mode']
+            if snap['online'] and 0 < step <= self.MAX_STEP:
+                # Boost or buck from which way the energy flows (the D1 may also say "Autonomous")
+                hv = power(e, 'hv')
+                for key, on in (('boost_seconds', hv is not None and hv >= self.FLOW_W),
+                                ('buck_seconds', hv is not None and hv <= -self.FLOW_W),
+                                ('derating_seconds', mode == 0x8)):
+                    if on:
+                        v[key] += step
+                        self._dirty = True
+            if e is not None and p is not None and mode not in MODES_NOT_RUNNING:
+                for field in ('lv_voltage', 'hv_voltage', 'temperature'):
+                    self._extremes(field, e[field])
+                for side in ('lv', 'hv'):
+                    peak = abs(e[side + '_current'])
+                    if v[side + '_current_peak'] is None or peak > v[side + '_current_peak']:
+                        v[side + '_current_peak'] = peak
+                        self._dirty = True
+            if p is not None:
+                bits = p['voltage_status']
+                for name, mask in VOLTAGE_ALARM_BITS.items():
+                    if bits & mask and not self._voltage_bits & mask:
+                        v[name + '_alarms'] += 1
+                        self._dirty = True
+                self._voltage_bits = bits
+                faults = [i for i in nc.active_alarms(p) if i < nc.FAULT_ALARM_COUNT]
+                if faults and not self._faulted:
+                    v['fault_events'] += 1
+                    v['last_fault'] = nc.ALARMS[faults[0]][2]
+                    v['last_fault_time'] = int(time.time())
+                    self._dirty = True
+                self._faulted = bool(faults)
+            if temperature_level > self._temperature_level:
+                v['temperature_alarms' if temperature_level == TEMP_ALARM else 'temperature_warnings'] += 1
+                self._dirty = True
+            self._temperature_level = temperature_level
+        if self._dirty and now - self._saved_at >= self.save_interval:
+            self.save(now)
+
+    def _extremes(self, field, value):
+        v = self.values
+        if v[field + '_min'] is None or value < v[field + '_min']:
+            v[field + '_min'] = value
+            self._dirty = True
+        if v[field + '_max'] is None or value > v[field + '_max']:
+            v[field + '_max'] = value
+            self._dirty = True
+
+    def clear(self):
+        with self._lock:
+            self._new()
+            self._dirty = True
+        log.info('History cleared')
+        self.save()
+
+    def save(self, now=None):
+        self._saved_at = time.monotonic() if now is None else now
+        if not self.path or not self._dirty:
+            return
+        with self._lock:
+            data, self._dirty = dict(self.values), False
+        save_json(self.path, data)
+
+    def as_dict(self):
+        """Everything, for the web page: energy in kWh, times in hours."""
+        with self._lock:
+            v = dict(self.values)
+        for k in ENERGY_KEYS:
+            v[k.replace('_charged', '_charged_kwh').replace('_drawn', '_drawn_kwh')] = round(v.pop(k) / 1000, 3)
+        for k in ('boost', 'buck', 'derating'):
+            v[k + '_hours'] = round(v.pop(k + '_seconds') / 3600, 2)
+        return v
 
 
 class StatusWatcher:
@@ -696,10 +866,10 @@ class DbusService:
 
     Dc/0 is the LV (12 V) side, Dc/In the HV (48 V) side, in both directions. Every value is
     read-only; the only writable paths are the switch-pane display settings (names, cards,
-    visibility).
+    visibility) and /History/Clear, which starts the monitor's own records again.
     """
 
-    def __init__(self, cfg, ui_settings, temperature_watch=None):
+    def __init__(self, cfg, ui_settings, temperature_watch=None, totals=None):
         for p in VELIB_PATHS:
             if os.path.isdir(p):
                 sys.path.insert(1, p)
@@ -708,6 +878,7 @@ class DbusService:
 
         self.ui = ui_settings
         self.temp = temperature_watch or TemperatureWatch(cfg)
+        self.totals = totals or Totals()
         d = cfg['dbus']
         iface = cfg['can']['interface']
         name = 'com.victronenergy.%s.nomadic_%s' % (
@@ -755,6 +926,25 @@ class DbusService:
         svc.add_path('/Alarms/HighTemperature', 0)
         svc.add_path('/State', None)
 
+        # History page (Device list > the D1 > History), Victron's DC meter layout. "Voltage" is the
+        # output side (Dc/0), "Aux voltage" the other side, as /Settings/HasStarterVoltage asks for.
+        # The alarm counts are the D1's own voltage warnings. "Produced energy" is what went into the
+        # output side's battery, "Consumed energy" what was taken out of it.
+        kwh = _text('kWh', 2)
+        for path, fmt in (('/History/MinimumVoltage', V), ('/History/MaximumVoltage', V),
+                          ('/History/MinimumStarterVoltage', V), ('/History/MaximumStarterVoltage', V),
+                          ('/History/LowVoltageAlarms', None), ('/History/HighVoltageAlarms', None),
+                          ('/History/LowStarterVoltageAlarms', None),
+                          ('/History/HighStarterVoltageAlarms', None),
+                          ('/History/MinimumTemperature', _text('C', 0)),
+                          ('/History/MaximumTemperature', _text('C', 0)),
+                          ('/History/EnergyOut', kwh), ('/History/EnergyIn', kwh)):
+            svc.add_path(path, None, gettextcallback=fmt)
+        svc.add_path('/Settings/HasStarterVoltage', 1)
+        svc.add_path('/Settings/HasTemperature', 1)
+        svc.add_path('/History/CanBeCleared', 1)
+        svc.add_path('/History/Clear', None, writeable=True, onchangecallback=self._on_clear)
+
         for path in ('/Nomadic/Online', '/Nomadic/OperatingMode', '/Nomadic/OperatingModeText',
                      '/Nomadic/PrechargeStatus', '/Nomadic/PrechargeStatusText',
                      '/Nomadic/LoadStatus', '/Nomadic/FaultStatus', '/Nomadic/VoltageStatus',
@@ -799,6 +989,30 @@ class DbusService:
         self.svc.add_path(path, self.ui.get(path, default), writeable=True,
                           onchangecallback=self._on_ui_setting)
 
+    def _on_clear(self, path, value):
+        """The GX's "Clear History" button. Starts the monitor's records again; nothing reaches the D1."""
+        if value is not None:
+            self.totals.clear()
+            self._refresh_history()
+        return True
+
+    def _refresh_history(self):
+        s, v = self.svc, self.totals.values
+        out = self.output_side
+        inp = 'lv' if out == 'hv' else 'hv'
+        s['/History/MinimumVoltage'] = v[out + '_voltage_min']
+        s['/History/MaximumVoltage'] = v[out + '_voltage_max']
+        s['/History/MinimumStarterVoltage'] = v[inp + '_voltage_min']
+        s['/History/MaximumStarterVoltage'] = v[inp + '_voltage_max']
+        s['/History/LowVoltageAlarms'] = v[out + '_low_alarms']
+        s['/History/HighVoltageAlarms'] = v[out + '_high_alarms']
+        s['/History/LowStarterVoltageAlarms'] = v[inp + '_low_alarms']
+        s['/History/HighStarterVoltageAlarms'] = v[inp + '_high_alarms']
+        s['/History/MinimumTemperature'] = v['temperature_min']
+        s['/History/MaximumTemperature'] = v['temperature_max']
+        s['/History/EnergyOut'] = round(v[out + '_charged'] / 1000, 3)
+        s['/History/EnergyIn'] = round(v[out + '_drawn'] / 1000, 3)
+
     def _on_ui_setting(self, path, value):
         if path.endswith(('/CustomName', '/Group')):
             ok = value is None or (isinstance(value, str) and len(value.encode('utf-8')) <= 32)
@@ -832,6 +1046,9 @@ class DbusService:
         s['/Alarms/HighTemperature'] = level
         if self.sensor is not None:
             self.sensor.refresh(e and e['temperature'], snap['online'])
+        self._refresh_history()
+        if s['/History/Clear'] is not None:   # ready for the next press (velib ignores a repeat)
+            s['/History/Clear'] = None
         s['/FirmwareVersion'] = v and v['software_raw']
         s['/HardwareVersion'] = v and v['hardware']
 
@@ -992,8 +1209,10 @@ class TemperatureUnit:
 # --------------------------------------------------------------------------- web page
 
 class WebApp:
-    def __init__(self, cfg, telemetry, history, temperature_unit=None, temperature_watch=None):
+    def __init__(self, cfg, telemetry, history, temperature_unit=None, temperature_watch=None,
+                 totals=None):
         self.telemetry = telemetry
+        self.totals = totals
         self.temperature_watch = temperature_watch or TemperatureWatch(cfg)
         self.temperature_unit = temperature_unit or TemperatureUnit(cfg['web']['temperature_unit'])
         self.history = history
@@ -1025,6 +1244,7 @@ class WebApp:
             'temperature_limits': {'warning': watch.warning, 'alarm': watch.alarm,
                                    'derate': D1_DERATE_C, 'shutdown': D1_SHUTDOWN_C},
             'version': snap['version'],
+            'totals': self.totals and self.totals.as_dict(),
             'rx_age': {'0x%03X' % k: None if a is None else round(a, 2)
                        for k, a in snap['ages'].items()},
             'rx_count': {'0x%03X' % k: n for k, n in snap['counts'].items()},
@@ -1290,19 +1510,24 @@ def main():
         run_monitor(interface, timeout)
         return
 
-    ui_file = 'ui.json'
+    ui_file, totals_file = 'ui.json', 'totals.json'
     if args.simulate:
         simulation_config(cfg)
         interface = SimulatedD1.interface
-        ui_file = 'ui-sim.json'
-        signal.signal(signal.SIGINT, lambda *a: os._exit(0))
-        signal.signal(signal.SIGTERM, lambda *a: os._exit(0))
+        ui_file, totals_file = 'ui-sim.json', 'totals-sim.json'
         log.warning('SIMULATION: pretend converter, no CAN bus is used. Ctrl+C to stop.')
 
     log.info('Nomadic DC-DC monitor %s starting on %s (monitor only: nothing is transmitted)',
              VERSION, interface)
     telemetry = Telemetry(timeout)
     history = History(telemetry)
+    totals = Totals(os.path.join(BASE_DIR, totals_file))
+
+    def stop(*_):   # svc -t / -d, reboot, Ctrl+C: keep the records, then go
+        totals.save()
+        os._exit(0)
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
     watcher = StatusWatcher(interface)
 
     dbus_service = None
@@ -1312,7 +1537,8 @@ def main():
     if not args.no_dbus:
         from dbus.mainloop.glib import DBusGMainLoop
         DBusGMainLoop(set_as_default=True)
-        dbus_service = DbusService(cfg, UiSettings(os.path.join(BASE_DIR, ui_file)), temperature_watch)
+        dbus_service = DbusService(cfg, UiSettings(os.path.join(BASE_DIR, ui_file)), temperature_watch,
+                                   totals)
 
     if args.simulate:
         bus = SimulatedD1()
@@ -1323,14 +1549,15 @@ def main():
     watcher.bus = bus
     start_thread('can-rx', rx_worker, bus, telemetry)
     if cfg['web'].getint('port'):
-        start_web(cfg, WebApp(cfg, telemetry, history, temperature_unit, temperature_watch))
+        start_web(cfg, WebApp(cfg, telemetry, history, temperature_unit, temperature_watch, totals))
 
     def tick():
         snap = telemetry.snapshot()
         watcher(snap)
         history.tick()
         temperature_unit.poll()
-        temperature_watch.update(snap)
+        level = temperature_watch.update(snap)
+        totals.update(snap, telemetry.take_energy(), level)
         if dbus_service is not None:
             dbus_service.refresh(snap)
 

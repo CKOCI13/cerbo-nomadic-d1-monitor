@@ -196,6 +196,18 @@ averaged point per interval (about 1,000 frames each) and resets them. An interv
 hv_current, hv_power, temperature)`. Memory use is about 2 MB when full. Nothing is written to disk, so the
 history starts again after a restart; VRM is the place for long-term history.
 
+`class Totals` keeps the running records that do survive a restart (`totals.json`, written every
+`TOTALS_SAVE_INTERVAL` = 300 s when something changed, and from the SIGTERM/SIGINT handler). `Telemetry.feed()`
+integrates each electric frame's power over the time since the previous one (gaps over `ENERGY_MAX_GAP` = 1 s are
+skipped) into Wh per side and direction; `Totals.update()`, called each second, adds those, the time boosting /
+bucking (from the sign of the 48 V power, ±20 W) and derating, lowest/highest voltages and temperature (not in
+modes 0x0/0x1/0x7/0xF), peak currents, and counts rising edges of the D1's voltage-status groups, of any fault and of
+the monitor's temperature levels. `DbusService` publishes them on the paths gui-v2's `PageDcMeterHistory.qml`
+reads (`/History/Minimum…`, `…StarterVoltage`, `…Alarms`, `…Temperature`, `EnergyOut`/`EnergyIn`, with
+`/Settings/HasStarterVoltage` and `/Settings/HasTemperature` = 1). `/History/CanBeCleared` = 1 shows the page's
+Clear History button, which writes `/History/Clear`; the driver clears the records and sets the path back to
+`None` on the next refresh, because velib ignores a write of the value a path already holds.
+
 ## The web page and its API
 
 `class WebApp` serves [`webui.html`](../dbus-nomadic-dcdc/webui.html) and two endpoints:
@@ -341,4 +353,4 @@ Waiting on real hardware or on Nomadic:
 Possible improvements:
 
 - Raise GX notifications (alarms) for D1 faults, through Venus OS's alarm paths.
-- Keep the history across restarts (a small file under `/data`, written every few minutes).
+- Keep the 24-hour chart history across restarts too (the running records already are).
