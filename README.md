@@ -248,6 +248,7 @@ cerbo-nomadic-d1-monitor/
 │   ├── safe-test-plan.pdf        printable checklist for bringing it into service
 │   ├── how-it-works.md           plain-English explanation with pictures
 │   ├── developer-guide.md        how the code is built
+│   ├── field-tests/              notes and photos from real-world tests
 │   ├── images/                   pictures used by the docs
 │   └── src/                      sources of the pictures and PDFs, and the script that builds them
 ├── tests/                    ← automated tests (run on any PC)
