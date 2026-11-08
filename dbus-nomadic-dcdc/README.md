@@ -7,6 +7,9 @@ DCDC_ELECTRIC_VALUE 0x088, DCDC_VERSION 0x520), and shows:
 * LV/HV voltage, current and power, temperature, operating mode, precharge status, firmware and hardware version,
   and every fault, voltage, load and derating bit, decoded into plain text
 * 24 hours of history, as charts on its web page
+* running records on the Cerbo's History page and the web page: lowest/highest voltage on each side and
+  temperature, kWh each way, the D1's voltage warning counts, peak currents, hours boosting/bucking/derating and
+  faults, kept across restarts until you press **Clear History**
 
 **Monitor only.** It never transmits on CAN: the socket is receive-only, there is no encoder for the control
 message (EMS_DCDC_CTRL 0x018), and nothing on D-Bus or the web page accepts a command. The D1 always runs on its
@@ -180,7 +183,27 @@ are refused with `405`.
 
 API: `GET /api/status` (live values) and `GET /api/history?minutes=60` (one point every 10 s; fields
 `time, lv_voltage, lv_current, lv_power, hv_voltage, hv_current, hv_power, temperature`). The history is kept in
-memory and starts again when the monitor restarts.
+memory and starts again when the monitor restarts. The running records (the **Records** card, and `totals` in
+`/api/status`) are kept in `totals.json` and survive restarts.
+
+### History page and records
+
+Device list › DC-DC D1 › **History** shows Victron's DC-meter history layout:
+
+| Cerbo shows | What it is (default `service_class = alternator`) |
+|---|---|
+| Minimum / Maximum voltage | 48 V side |
+| Minimum / Maximum aux voltage | 12 V side |
+| Low / High voltage alarms | how many times the D1 reported low (or under) / high (or over) voltage on the 48 V side |
+| Low / High aux voltage alarms | the same for the 12 V side |
+| Minimum / Maximum temperature | the D1's board temperature (in the Cerbo's unit) |
+| Produced energy | kWh into the 48 V battery (boost) |
+| Consumed energy | kWh taken from the 48 V battery (buck) |
+
+With `service_class = dcdc` the 12 V side is "voltage" and "energy", the 48 V side "aux". **Clear History** at the
+bottom starts every record again (it only resets the monitor's file; the D1 isn't touched). Lowest and highest
+values count only while the D1 is running. The records are saved to `totals.json` every 5 minutes and when the
+service stops, so a power cut can lose up to the last 5 minutes.
 
 ### As an alternator (default) or a DC-DC converter
 
@@ -300,6 +323,7 @@ controller (if KL15 is joined to KL30, as on the LTV1, pull that wire's fuse for
 | `webui.html` | The web page |
 | `config.ini` | Settings |
 | `ui.json` | Created at run time: your switch-pane names, cards and visibility (`ui-sim.json` for the simulation) |
+| `totals.json` | Created at run time: the running records for the History page (`totals-sim.json` for the simulation) |
 | `install.sh` / `uninstall.sh` | Add / remove the service |
 | `service/` | daemontools run scripts |
 

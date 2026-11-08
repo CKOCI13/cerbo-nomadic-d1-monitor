@@ -181,6 +181,35 @@
     <div class="card chart" data-chart="temperature"><h3 id="temp-title">Temperature (°F)</h3><div class="legend"></div><div class="plot"></div></div>
   </div>
 
+  <div class="card" id="totals" style="margin-bottom:12px">
+    <h2>Records <span class="sub" id="t-since" style="font-weight:normal"></span></h2>
+    <div class="grid" style="margin:0">
+      <div>
+        <div class="row"><span>Into the 48 V battery (boost)</span><span id="t-hv-in">—</span></div>
+        <div class="row"><span>From the 48 V battery (buck)</span><span id="t-hv-out">—</span></div>
+        <div class="row"><span>From the 12 V side (boost)</span><span id="t-lv-out">—</span></div>
+        <div class="row"><span>Into the 12 V side (buck)</span><span id="t-lv-in">—</span></div>
+        <div class="row"><span>Time boosting / bucking</span><span id="t-hours">—</span></div>
+        <div class="row"><span>Time derating (too hot)</span><span id="t-derate">—</span></div>
+      </div>
+      <div>
+        <div class="row"><span>12 V side lowest / highest</span><span id="t-lv-v">—</span></div>
+        <div class="row"><span>48 V side lowest / highest</span><span id="t-hv-v">—</span></div>
+        <div class="row"><span>Peak current 12 V / 48 V</span><span id="t-peak">—</span></div>
+        <div class="row"><span>Temperature lowest / highest</span><span id="t-temp">—</span></div>
+        <div class="row"><span>Temperature warnings / alarms</span><span id="t-temp-n">—</span></div>
+      </div>
+      <div>
+        <div class="row"><span>D1 faults</span><span id="t-faults">—</span></div>
+        <div class="row"><span>Last fault</span><span id="t-last">—</span></div>
+        <div class="row"><span>12 V low / high voltage warnings</span><span id="t-lv-n">—</span></div>
+        <div class="row"><span>48 V low / high voltage warnings</span><span id="t-hv-n">—</span></div>
+      </div>
+    </div>
+    <p class="sub" style="margin:10px 0 0">Kept through restarts and reboots. Lowest and highest values count only while the
+      D1 is running. To start again: on the Cerbo, Device list › the D1 › History › Clear History.</p>
+  </div>
+
   <div class="grid">
     <div class="card">
       <h2>Details</h2>
@@ -282,11 +311,39 @@ function render(s) {
   $('alarms').style.display = s.alarms.length ? 'block' : 'none';
   $('alarm-list').replaceChildren(...s.alarms.map(a => { const li = document.createElement('li'); li.textContent = a; return li; }));
 
+  renderTotals(s.totals);
+
   const v = s.version;
   $('ver').textContent = v ? v.software + ' / ' + v.hardware : '—';
   const age = k => s.rx_age[k] == null ? 'never' : s.rx_age[k].toFixed(1) + ' s';
   $('ages').textContent = ['0x066', '0x088', '0x520'].map(age).join(' / ');
   $('drv').textContent = s.driver_version + ' (monitor only)';
+}
+
+// Running records since the last Clear History (kept by the monitor across restarts)
+function renderTotals(t) {
+  $('totals').style.display = t ? '' : 'none';
+  if (!t) return;
+  const kwh = v => v == null ? '—' : v.toFixed(v < 10 ? 2 : 1) + ' kWh';
+  const pair = (a, b, d, u) => (a == null ? '—' : a.toFixed(d)) + ' / ' + (b == null ? '—' : b.toFixed(d)) + ' ' + u;
+  const hrs = h => h < 1 ? Math.round(h * 60) + ' min' : h.toFixed(1) + ' h';
+  const when = sec => new Date(sec * 1000).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'});
+  $('t-since').textContent = 'since ' + when(t.since);
+  $('t-hv-in').textContent = kwh(t.hv_charged_kwh);
+  $('t-hv-out').textContent = kwh(t.hv_drawn_kwh);
+  $('t-lv-out').textContent = kwh(t.lv_drawn_kwh);
+  $('t-lv-in').textContent = kwh(t.lv_charged_kwh);
+  $('t-hours').textContent = hrs(t.boost_hours) + ' / ' + hrs(t.buck_hours);
+  $('t-derate').textContent = hrs(t.derating_hours);
+  $('t-lv-v').textContent = pair(t.lv_voltage_min, t.lv_voltage_max, 1, 'V');
+  $('t-hv-v').textContent = pair(t.hv_voltage_min, t.hv_voltage_max, 1, 'V');
+  $('t-peak').textContent = pair(t.lv_current_peak, t.hv_current_peak, 0, 'A');
+  $('t-temp').textContent = pair(toUnit(t.temperature_min), toUnit(t.temperature_max), 0, tSuffix());
+  $('t-temp-n').textContent = t.temperature_warnings + ' / ' + t.temperature_alarms;
+  $('t-faults').textContent = t.fault_events;
+  $('t-last').textContent = t.last_fault ? t.last_fault + ' (' + when(t.last_fault_time) + ')' : 'none';
+  $('t-lv-n').textContent = t.lv_low_alarms + ' / ' + t.lv_high_alarms;
+  $('t-hv-n').textContent = t.hv_low_alarms + ' / ' + t.hv_high_alarms;
 }
 
 async function poll() {

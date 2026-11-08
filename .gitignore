@@ -18,6 +18,8 @@ state.json
 state-sim.json
 ui.json
 ui-sim.json
+totals.json
+totals-sim.json
 *.tmp
 
 # Python

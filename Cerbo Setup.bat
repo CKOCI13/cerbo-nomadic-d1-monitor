@@ -6,7 +6,7 @@ cd /d "%~dp0"
 set "DRIVER=dbus-nomadic-dcdc"
 set "REMOTE=/data/dbus-nomadic-dcdc"
 set "SSHOPT=-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
-set "PACK=tar --exclude=__pycache__ --exclude=state*.json --exclude=ui*.json -cf - %DRIVER%"
+set "PACK=tar --exclude=__pycache__ --exclude=state*.json --exclude=ui*.json --exclude=totals*.json -cf - %DRIVER%"
 set "UNPACK=tar -xf - -C /data && chmod -R u=rwX,go=rX %REMOTE%"
 
 if not exist "%DRIVER%\dbus-nomadic-dcdc.py" (
@@ -108,7 +108,7 @@ echo.
 echo  Making a USB-stick installer
 echo  -----------------------------------------------------------
 echo.
-tar --exclude=__pycache__ --exclude=state*.json --exclude=ui*.json --exclude=*.tmp -czf venus-data-nomadic-d1-monitor.tar.gz %DRIVER% -C usb rc
+tar --exclude=__pycache__ --exclude=state*.json --exclude=ui*.json --exclude=totals*.json --exclude=*.tmp -czf venus-data-nomadic-d1-monitor.tar.gz %DRIVER% -C usb rc
 if errorlevel 1 (
     echo  Could not make the file. Windows 10 or newer is needed for the built-in "tar".
     goto done

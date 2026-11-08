@@ -44,11 +44,12 @@ class DbusTest(unittest.TestCase):
         self.assertIn('monitor only', self.svc['/Mgmt/Connection'])
 
     def test_nothing_can_be_controlled(self):
-        # Only the switch-pane display settings (names, cards, visibility) are writable.
+        # Only the switch-pane display settings (names, cards, visibility) and the History page's
+        # Clear button (the monitor's own records) are writable.
         writable = [p for p, item in self.svc.paths.items() if item['writeable']]
         self.assertTrue(writable)
         for p in writable:
-            self.assertTrue(p.startswith('/GenericInput/') and '/Settings/' in p, p)
+            self.assertTrue(p == '/History/Clear' or (p.startswith('/GenericInput/') and '/Settings/' in p), p)
         self.assertFalse(any(p.startswith('/SwitchableOutput') for p in self.svc.paths))
         self.assertNotIn('/Mode', self.svc.paths)
         self.assertFalse(any('/Control/' in p for p in self.svc.paths))

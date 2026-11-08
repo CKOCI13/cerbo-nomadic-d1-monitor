@@ -6,6 +6,28 @@ This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
 
+## 2.5.0 (2026-11-07)
+
+**History.** The Cerbo's **History** page for the D1 (Device list › DC-DC D1 › History) was empty, apart from
+"Reset history on the monitor itself", because the monitor only sent live readings. It now keeps running records,
+saved on the Cerbo so they survive restarts, reboots and USB reinstalls, until you clear them:
+
+- **On the Cerbo's History page** (Victron's own layout): **Minimum / Maximum voltage** (48 V side), **Minimum /
+  Maximum aux voltage** (12 V side), **Minimum / Maximum temperature** (the D1's board), **Produced energy** (kWh
+  into the 48 V battery while boosting) and **Consumed energy** (kWh taken from it while bucking), and counts of
+  the D1's own **low / high voltage** warnings on each side. Its **Clear History** button starts them all again.
+- **On the web page**, a new **Records** card shows all of that plus kWh on the 12 V side, peak current on each
+  side, hours boosting, bucking and derating, temperature warnings and alarms, and how many faults the D1 has
+  reported (with the last one and when). `/api/status` has them under `totals`.
+- Energy is added up from every reading (100 a second); a gap of more than a second without readings isn't
+  counted. Lowest and highest values only count while the D1 is running (not while it starts up or shuts down).
+  Boost and buck time come from which way the energy flows, so they count in "Autonomous" mode too.
+- Kept in `totals.json` next to the driver, saved every 5 minutes and when the monitor stops. Cerbo Setup and the
+  USB installer leave it out, so reinstalling doesn't reset it.
+- The one new writable item is `/History/Clear`. It clears the monitor's own records; nothing is sent to the D1.
+- The 24-hour charts are unchanged (still in memory only).
+- New tests: `tests/test_totals.py`.
+
 ## 2.4.1 (2026-11-05)
 
 From the first look at the D1 on VRM:

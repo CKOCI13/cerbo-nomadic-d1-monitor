@@ -5,6 +5,6 @@
 set -e
 cd "$(dirname "$0")"
 NAME=venus-data-nomadic-d1-monitor.tar.gz
-tar --exclude=__pycache__ --exclude='state*.json' --exclude='ui*.json' --exclude='*.tmp' \
+tar --exclude=__pycache__ --exclude='state*.json' --exclude='ui*.json' --exclude='totals*.json' --exclude='*.tmp' \
     -czf "$NAME" dbus-nomadic-dcdc -C usb rc
 echo "Made $NAME. Copy it to the top folder of a USB stick or SD card."

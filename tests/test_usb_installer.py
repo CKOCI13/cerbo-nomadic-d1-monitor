@@ -25,7 +25,8 @@ class UsbInstallerTest(unittest.TestCase):
                             ignore=shutil.ignore_patterns('__pycache__'))
         shutil.copy(os.path.join(REPO, 'make-usb-installer.sh'), self.tmp)
         # Files the driver makes while it runs must never be packed (they'd overwrite the Cerbo's).
-        open(os.path.join(self.tmp, 'dbus-nomadic-dcdc', 'ui.json'), 'w').close()
+        for name in ('ui.json', 'totals.json'):
+            open(os.path.join(self.tmp, 'dbus-nomadic-dcdc', name), 'w').close()
         subprocess.run(['sh', os.path.join(self.tmp, 'make-usb-installer.sh')], check=True,
                        stdout=subprocess.DEVNULL)
         with tarfile.open(os.path.join(self.tmp, 'venus-data-nomadic-d1-monitor.tar.gz')) as t:
@@ -41,7 +42,7 @@ class UsbInstallerTest(unittest.TestCase):
         self.assertEqual(tops, {'dbus-nomadic-dcdc', 'rc'})
 
     def test_leaves_out_run_time_files(self):
-        self.assertFalse(any(n.endswith(('ui.json', 'state.json')) for n in self.names))
+        self.assertFalse(any(n.endswith(('ui.json', 'state.json', 'totals.json')) for n in self.names))
 
     def test_post_hook_installs_only_after_a_good_unpack(self):
         self.assertIn('rc/post-hook.sh', self.names)
