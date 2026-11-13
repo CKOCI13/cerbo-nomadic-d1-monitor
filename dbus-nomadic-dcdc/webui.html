@@ -254,11 +254,13 @@ function render(s) {
   $('online').className = 'pill ' + (s.online ? 'ok' : 'bad');
 
   const e = s.electric || {};
-  $('lv-v').textContent = fmt(e.lv_voltage, 1, 'V');
-  $('lv-i').textContent = fmt(e.lv_current, 0, 'A');
+  // Voltage, current and power averaged like the Cerbo's screens ([dbus] smoothing in config.ini)
+  const a = s.smoothed || e;
+  $('lv-v').textContent = fmt(a.lv_voltage, 1, 'V');
+  $('lv-i').textContent = fmt(a.lv_current, 1, 'A');
   $('lv-p').textContent = fmt(s.power.lv, 0, 'W');
-  $('hv-v').textContent = fmt(e.hv_voltage, 1, 'V');
-  $('hv-i').textContent = fmt(e.hv_current, 0, 'A');
+  $('hv-v').textContent = fmt(a.hv_voltage, 1, 'V');
+  $('hv-i').textContent = fmt(a.hv_current, 1, 'A');
   $('hv-p').textContent = fmt(s.power.hv, 0, 'W');
   if (s.temperature_unit) tUnit = s.temperature_unit;
   $('temp').textContent = fmt(toUnit(e.temperature), 0, tSuffix());
@@ -293,10 +295,10 @@ function render(s) {
     : dir === 2 ? 'Boost · charging the 48 V battery'
     : 'Standby';
   $('tile').classList.toggle('flowing', s.online && dir !== 0);
-  $('tile-lv-v').textContent = fmt(e.lv_voltage, 2, 'V');
-  $('tile-lv-i').textContent = fmt(e.lv_current, 1, 'A');
-  $('tile-hv-v').textContent = fmt(e.hv_voltage, 2, 'V');
-  $('tile-hv-i').textContent = fmt(e.hv_current, 1, 'A');
+  $('tile-lv-v').textContent = fmt(a.lv_voltage, 2, 'V');
+  $('tile-lv-i').textContent = fmt(a.lv_current, 1, 'A');
+  $('tile-hv-v').textContent = fmt(a.hv_voltage, 2, 'V');
+  $('tile-hv-i').textContent = fmt(a.hv_current, 1, 'A');
   $('tile-temp').textContent = fmt(toUnit(e.temperature), 0, tSuffix());
   $('tile-temp').className = 'tt' + (lvl === 2 ? ' bad' : lvl === 1 ? ' warn' : '');
 
