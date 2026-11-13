@@ -6,6 +6,28 @@ This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
 
+## 2.6.0 (2026-11-13)
+
+**Steadier readings on the Cerbo.** The D1 reports current in whole amps. In a field test (engine running, D1
+boosting about 2 kW into the 48 V battery) a steady current flipped between 36 and 37 A, so the Overview's
+**Alternator** tile jumped between about 1958 and 2013 W. The Cerbo works out **DC Loads** as alternator minus
+battery, so that 55 W flicker showed up there as anything from about −58 to +55 W, even though nothing was
+switching on and off.
+
+- Voltage, current and power are now **averaged over the last 5 seconds** (about 500 readings) before the Cerbo
+  shows them: the Overview tile and DC Loads, the device page, the switch-pane cards, VRM and the web page.
+  Current is shown with one decimal (36.4 A instead of 36 or 37 A).
+- New setting `[dbus] smoothing` in `config.ini` (seconds; `0` = off, the latest reading as before). An older
+  `config.ini` without it uses 5.
+- Not averaged: temperature and its warnings, alarms and faults, the History page records, kWh totals, peak
+  currents and the 24-hour charts (they use every reading, as before). `/api/status` keeps the latest frame
+  under `electric` and adds the averages under `smoothed`; its `power` is now the averaged power.
+- **Amps on the Overview tile:** no driver change needed. Victron's tile shows the current the monitor already
+  sends when the Cerbo is set to show amps: Settings › Display & Appearance › Data units › **Electrical power
+  display**, then **Current (amps)** or **Mixed (AC in watts, DC in amps)**. The tile shows one or the other,
+  not both, and the setting applies to every tile.
+- New tests: `tests/test_smoothing.py`.
+
 ## 2.5.0 (2026-11-07)
 
 **History.** The Cerbo's **History** page for the D1 (Device list › DC-DC D1 › History) was empty, apart from

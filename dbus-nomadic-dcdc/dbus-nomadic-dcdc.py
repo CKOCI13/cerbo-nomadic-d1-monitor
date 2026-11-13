@@ -42,7 +42,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.5.0'
+VERSION = '2.6.0'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -68,6 +68,7 @@ DEFAULTS = {
         'custom_name': 'DC-DC D1',
         'update_interval': '1.0',
         'switch_pane': 'yes',
+        'smoothing': '5',
     },
     'temperature': {
         'warning': '100',
@@ -120,6 +121,10 @@ def save_json(path, data):
 
 ELECTRIC_FIELDS = ('lv_voltage', 'lv_current', 'hv_voltage', 'hv_current', 'temperature')
 ENERGY_KEYS = ('lv_charged', 'lv_drawn', 'hv_charged', 'hv_drawn')   # Wh
+# Averaged for the Cerbo's screens ([dbus] smoothing): the D1 sends current in whole amps, so a
+# steady 36.4 A flips between 36 and 37 A, about 55 W on the 48 V side. The GX works out "DC loads"
+# as alternator minus battery, so without averaging that flicker shows up there as -55 to +55 W.
+SMOOTH_FIELDS = ('lv_voltage', 'lv_current', 'lv_power', 'hv_voltage', 'hv_current', 'hv_power')
 
 MODE_BOOST = 0x3   # 12 V side -> 48 V side
 MODE_BUCK = 0x4    # 48 V side -> 12 V side
@@ -153,8 +158,10 @@ class Telemetry:
         nc.ID_VERSION: nc.decode_version,
     }
 
-    def __init__(self, timeout):
+    def __init__(self, timeout, smoothing=0.0):
         self.timeout = timeout
+        self.smoothing = max(0.0, smoothing)   # seconds averaged for the Cerbo's screens; 0 = off
+        self._window = collections.deque()      # (time, SMOOTH_FIELDS values) within that time
         self._lock = threading.Lock()
         self._latest = {}
         self._counts = dict.fromkeys(nc.RX_IDS, 0)
@@ -183,6 +190,13 @@ class Telemetry:
                 for k in ELECTRIC_FIELDS:
                     self._sums[k] += value[k]
                 self._samples += 1
+                if self.smoothing:
+                    self._window.append((now, (
+                        value['lv_voltage'], value['lv_current'],
+                        value['lv_voltage'] * value['lv_current'],
+                        value['hv_voltage'], value['hv_current'],
+                        value['hv_voltage'] * value['hv_current'])))
+                    self._trim(now)
                 # Energy: each reading's power over the time since the one before (100 a second)
                 if self._last_electric is not None and 0 < now - self._last_electric <= ENERGY_MAX_GAP:
                     hours = (now - self._last_electric) / 3600
@@ -190,6 +204,39 @@ class Telemetry:
                         w = value[side + '_voltage'] * value[side + '_current']
                         self._energy[side + ('_charged' if w > 0 else '_drawn')] += abs(w) * hours
                 self._last_electric = now
+
+    def _trim(self, now):
+        start = now - self.smoothing
+        while self._window and self._window[0][0] < start:
+            self._window.popleft()
+
+    def smoothed(self, electric, now=None):
+        """electric with voltage, current and power averaged over the last [dbus] smoothing seconds.
+
+        Adds lv_power / hv_power (the average of V x A, not average V x average A). Temperature and
+        everything else stay as the latest reading. None stays None (converter offline).
+        """
+        if electric is None:
+            return None
+        e = dict(electric)
+        if not self.smoothing:
+            return self._with_power(e)
+        now = time.monotonic() if now is None else now
+        with self._lock:
+            self._trim(now)
+            rows = list(self._window)
+        if not rows:
+            return self._with_power(e)
+        n = len(rows)
+        for i, k in enumerate(SMOOTH_FIELDS):
+            e[k] = sum(r[1][i] for r in rows) / n
+        return e
+
+    @staticmethod
+    def _with_power(e):
+        for side in ('lv', 'hv'):
+            e[side + '_power'] = e[side + '_voltage'] * e[side + '_current']
+        return e
 
     def take_energy(self):
         """Wh into (charged) and out of (drawn) each side's battery since the last call."""
@@ -222,6 +269,7 @@ class Telemetry:
             'online': parameter is not None or electric is not None,
             'parameter': parameter,
             'electric': electric,
+            'smoothed': self.smoothed(electric, now),
             'version': version,
             'ages': ages,
             'counts': counts,
@@ -765,10 +813,10 @@ INPUTS = (
     ('temperature', 'Temperature', INPUT_VALUE, '/Temperature', 0, None, None),
     ('precharge_status', 'Precharge status', INPUT_DISCRETE, None, None, PRECHARGE_LABELS, None),
     ('lv_voltage', 'Voltage', INPUT_VALUE, 'V', 1, None, 'lv'),
-    ('lv_current', 'Current', INPUT_VALUE, 'A', 0, None, 'lv'),
+    ('lv_current', 'Current', INPUT_VALUE, 'A', 1, None, 'lv'),
     ('lv_power', 'Power', INPUT_VALUE, 'W', 0, None, 'lv'),
     ('hv_voltage', 'Voltage', INPUT_VALUE, 'V', 1, None, 'hv'),
-    ('hv_current', 'Current', INPUT_VALUE, 'A', 0, None, 'hv'),
+    ('hv_current', 'Current', INPUT_VALUE, 'A', 1, None, 'hv'),
     ('hv_power', 'Power', INPUT_VALUE, 'W', 0, None, 'hv'),
 )
 # The D1 manual doesn't use precharge, so it starts hidden (show it from the device page).
@@ -776,9 +824,14 @@ HIDDEN_BY_DEFAULT = ('precharge_status',)
 
 
 def power(electric, side):
-    """Power on one side in W (V x A, sign as the converter reports the current), or None."""
+    """Power on one side in W (V x A, sign as the converter reports the current), or None.
+
+    Uses the averaged power when the readings have been smoothed (Telemetry.smoothed).
+    """
     if electric is None:
         return None
+    if side + '_power' in electric:
+        return round(electric[side + '_power'])
     return round(electric[side + '_voltage'] * electric[side + '_current'])
 
 
@@ -910,7 +963,7 @@ class DbusService:
         # Dc/0 is + when current flows into that battery; Dc/In is + when current flows from the
         # other side into the converter. Both are negative while the converter runs the other way.
         self.output_side = 'hv' if d['service_class'] == 'alternator' else 'lv'
-        V, A, W = _text('V', 2), _text('A', 0), _text('W', 0)
+        V, A, W = _text('V', 2), _text('A', 1), _text('W', 0)
         for path, fmt in (('/Dc/0/Voltage', V), ('/Dc/0/Current', A), ('/Dc/0/Power', W),
                           ('/Dc/In/V', V), ('/Dc/In/I', A), ('/Dc/In/P', W)):
             svc.add_path(path, None, gettextcallback=fmt)
@@ -1030,15 +1083,16 @@ class DbusService:
             self.svc['/Mgmt/Connection'] = connection
         s = self.svc
         e, p, v = snap['electric'], snap['parameter'], snap['version']
+        a = snap.get('smoothed', e)   # averaged voltage, current and power ([dbus] smoothing)
 
         out = self.output_side
         inp = 'lv' if out == 'hv' else 'hv'
-        s['/Dc/0/Voltage'] = e and e[out + '_voltage']
-        s['/Dc/0/Current'] = e and e[out + '_current']
-        s['/Dc/0/Power'] = power(e, out)
-        s['/Dc/In/V'] = e and e[inp + '_voltage']
-        s['/Dc/In/I'] = e and -e[inp + '_current']
-        s['/Dc/In/P'] = e and -power(e, inp)
+        s['/Dc/0/Voltage'] = a and round(a[out + '_voltage'], 2)
+        s['/Dc/0/Current'] = a and round(a[out + '_current'], 1)
+        s['/Dc/0/Power'] = power(a, out)
+        s['/Dc/In/V'] = a and round(a[inp + '_voltage'], 2)
+        s['/Dc/In/I'] = a and -round(a[inp + '_current'], 1)
+        s['/Dc/In/P'] = a and -power(a, inp)
         s['/State'] = victron_state(p)
         level = self.temp.update(snap)
         if self.publish_temperature:
@@ -1084,10 +1138,14 @@ class DbusService:
         else:
             s['/GenericInput/status/Value'] = p and p['operating_mode']
         s['/GenericInput/status/Status'] = 0 if snap['online'] else 1
+        a = snap.get('smoothed', e)
         for channel in ELECTRIC_FIELDS:
-            s['/GenericInput/%s/Value' % channel] = e and e[channel]
-        s['/GenericInput/lv_power/Value'] = power(e, 'lv')
-        s['/GenericInput/hv_power/Value'] = power(e, 'hv')
+            source = e if channel == 'temperature' else a
+            value = source and source[channel]
+            s['/GenericInput/%s/Value' % channel] = (
+                value if value is None or channel == 'temperature' else round(value, 2))
+        s['/GenericInput/lv_power/Value'] = power(a, 'lv')
+        s['/GenericInput/hv_power/Value'] = power(a, 'hv')
         s['/GenericInput/precharge_status/Value'] = p and p['precharge_status']
 
 
@@ -1225,6 +1283,7 @@ class WebApp:
     def status(self):
         snap = self.telemetry.snapshot()
         e = snap['electric']
+        a = snap['smoothed']
         watch = self.temperature_watch
         watch.update(snap)
         temperature_text = watch.text(self.temperature_unit.unit)
@@ -1237,7 +1296,10 @@ class WebApp:
             'temperature_unit': self.temperature_unit.unit,
             'online': snap['online'],
             'electric': e,
-            'power': {'lv': power(e, 'lv'), 'hv': power(e, 'hv')},
+            # Averaged like the Cerbo's screens ([dbus] smoothing seconds); 'electric' is the latest
+            'power': {'lv': power(a, 'lv'), 'hv': power(a, 'hv')},
+            'smoothing': self.telemetry.smoothing,
+            'smoothed': a and {k: round(a[k], 2) for k in SMOOTH_FIELDS},
             'parameter': snap['parameter'],
             'alarms': alarms,
             'temperature_level': watch.level,
@@ -1519,7 +1581,10 @@ def main():
 
     log.info('Nomadic DC-DC monitor %s starting on %s (monitor only: nothing is transmitted)',
              VERSION, interface)
-    telemetry = Telemetry(timeout)
+    log.info('Readings on the Cerbo averaged over %g s ([dbus] smoothing)',
+             cfg['dbus'].getfloat('smoothing'))
+    smoothing = cfg['dbus'].getfloat('smoothing')
+    telemetry = Telemetry(timeout, smoothing)
     history = History(telemetry)
     totals = Totals(os.path.join(BASE_DIR, totals_file))
 

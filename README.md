@@ -64,6 +64,9 @@ New to all this? **[How it works, in plain English](docs/how-it-works.md)** expl
   12 V side and its 48 V side.
 - **On the Overview page:** an Alternator tile with the power going into the 48 V battery (minus while the D1 takes
   power from it for the 12 V side). The D1 is listed as an alternator so the Cerbo's DC Loads figure stays right.
+  Readings are averaged over 5 seconds so the tile and DC Loads don't jump (the D1 reports whole amps). To see
+  amps instead of watts on the tile, set Settings › Display & Appearance › Data units › Electrical power display
+  to Mixed (AC in watts, DC in amps).
 - **The D1's temperature on every screen:** the Overview tile, the device page, a gauge on Levels › Environment
   (it's also listed as a temperature sensor), the switch pane, VRM and the web page. The D1 doesn't warn before it
   gets hot enough to cut back its power (221 °F), so the monitor does: a Cerbo **High Temperature** notification
