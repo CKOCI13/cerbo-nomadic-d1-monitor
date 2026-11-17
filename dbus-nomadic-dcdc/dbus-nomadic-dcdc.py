@@ -42,7 +42,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import nomadic_can as nc
 
-VERSION = '2.5.0'
+VERSION = '2.5.1-idle'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VELIB_PATHS = (
     os.path.join(BASE_DIR, 'ext', 'velib_python'),
@@ -68,6 +68,7 @@ DEFAULTS = {
         'custom_name': 'DC-DC D1',
         'update_interval': '1.0',
         'switch_pane': 'yes',
+        'idle_current': '2',
     },
     'temperature': {
         'warning': '100',
@@ -123,9 +124,11 @@ ENERGY_KEYS = ('lv_charged', 'lv_drawn', 'hv_charged', 'hv_drawn')   # Wh
 
 MODE_BOOST = 0x3   # 12 V side -> 48 V side
 MODE_BUCK = 0x4    # 48 V side -> 12 V side
+MODE_IDLE = 0x2
+IDLE_TEXT = 'Idle (no power flow)'
 
 
-def orient(electric, parameter):
+def orient(electric, parameter, idle_current=0.0):
     """Give the currents one sign convention: + = flowing into that side's battery.
 
     The CAN document's example frame is signed that way, but a real D1 boosting at 132 A reported both
@@ -133,6 +136,11 @@ def orient(electric, parameter):
     from the operating mode: boost takes current out of the 12 V side and puts it into the 48 V side,
     buck the other way round. In every other mode the currents are kept as the converter sends them.
     The values as received stay available as lv_current_reported / hv_current_reported.
+
+    Idle rule: a parked D1 can stay in boost or buck after the drive while moving no power, and
+    still report a fixed few amps (seen: -5/-6 A on 12 V, +2 A on 48 V, shown as a phantom 116 W
+    while the Lithionics read 0.0 A). So when the 48 V current is idle_current amps or less, both
+    currents are shown as 0 and idle_filtered is set (idle_current = 0 turns this off).
     """
     e = dict(electric)
     e['lv_current_reported'], e['hv_current_reported'] = e['lv_current'], e['hv_current']
@@ -141,7 +149,19 @@ def orient(electric, parameter):
         e['lv_current'], e['hv_current'] = -abs(e['lv_current']), abs(e['hv_current'])
     elif mode == MODE_BUCK:
         e['lv_current'], e['hv_current'] = abs(e['lv_current']), -abs(e['hv_current'])
+    e['idle_filtered'] = bool(idle_current > 0 and abs(e['hv_current_reported']) <= idle_current)
+    if e['idle_filtered']:
+        e['lv_current'] = e['hv_current'] = 0.0
     return e
+
+
+def idle_parameter(parameter):
+    """The parameter frame as shown while the idle rule is on: mode Idle, reported mode kept."""
+    p = dict(parameter)
+    p['operating_mode_reported'] = p['operating_mode']
+    p['operating_mode_text_reported'] = p['operating_mode_text']
+    p['operating_mode'], p['operating_mode_text'] = MODE_IDLE, IDLE_TEXT
+    return p
 
 
 class Telemetry:
@@ -153,8 +173,9 @@ class Telemetry:
         nc.ID_VERSION: nc.decode_version,
     }
 
-    def __init__(self, timeout):
+    def __init__(self, timeout, idle_current=0.0):
         self.timeout = timeout
+        self.idle_current = idle_current
         self._lock = threading.Lock()
         self._latest = {}
         self._counts = dict.fromkeys(nc.RX_IDS, 0)
@@ -176,7 +197,7 @@ class Telemetry:
         with self._lock:
             if can_id == nc.ID_ELECTRIC:
                 parameter = self._latest.get(nc.ID_PARAMETER, (None, None))[1]
-                value = orient(value, parameter)
+                value = orient(value, parameter, self.idle_current)
             self._latest[can_id] = (now, value)
             self._counts[can_id] += 1
             if can_id == nc.ID_ELECTRIC:
@@ -217,6 +238,9 @@ class Telemetry:
             ages[can_id] = None if t is None else now - t
             fresh[can_id] = value if t is not None and now - t <= self.timeout else None
         parameter, electric = fresh[nc.ID_PARAMETER], fresh[nc.ID_ELECTRIC]
+        if (parameter is not None and electric is not None and electric.get('idle_filtered')
+                and parameter['operating_mode'] in (MODE_BOOST, MODE_BUCK)):
+            parameter = idle_parameter(parameter)
         version = latest.get(nc.ID_VERSION, (None, None))[1]   # does not change; keep last
         return {
             'online': parameter is not None or electric is not None,
@@ -1342,7 +1366,7 @@ def run_monitor(interface, timeout):
             interface = find_converter()
         print('Converter found on %s.' % interface)
     bus = CanBus(interface)
-    telemetry = Telemetry(timeout)
+    telemetry = Telemetry(timeout)   # raw readings for diagnosis, no idle rule
     start_thread('can-rx', rx_worker, bus, telemetry)
     print('Listening on %s (monitor only: nothing is ever transmitted). Ctrl+C to stop.' % interface)
     previous = dict.fromkeys(nc.RX_IDS, 0)
@@ -1502,6 +1526,7 @@ def main():
         cfg['can']['interface'] = args.interface
     interface = cfg['can']['interface']
     timeout = cfg['can'].getfloat('timeout')
+    idle_current = max(0.0, cfg['dbus'].getfloat('idle_current'))
 
     if args.scan:
         run_scan(interface)
@@ -1519,7 +1544,7 @@ def main():
 
     log.info('Nomadic DC-DC monitor %s starting on %s (monitor only: nothing is transmitted)',
              VERSION, interface)
-    telemetry = Telemetry(timeout)
+    telemetry = Telemetry(timeout, idle_current)
     history = History(telemetry)
     totals = Totals(os.path.join(BASE_DIR, totals_file))
 
