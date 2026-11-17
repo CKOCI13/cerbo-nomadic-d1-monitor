@@ -162,6 +162,7 @@
       <div class="row"><span>Temperature</span><span id="temp-state">—</span></div>
       <div class="row"><span>Mode</span><span id="mode">—</span></div>
       <div class="row"><span>Precharge</span><span id="prech">—</span></div>
+      <div class="row" id="idle-row" style="display:none"><span>D1 reports</span><span id="idle-raw">—</span></div>
     </div>
   </div>
 
@@ -305,6 +306,10 @@ function render(s) {
   const p = s.parameter || {};
   $('mode').textContent = p.operating_mode_text || '—';
   $('prech').textContent = p.precharge_status_text || '—';
+  const idle = !!(e.idle_filtered && p.operating_mode_text_reported);
+  $('idle-row').style.display = idle ? '' : 'none';
+  if (idle) $('idle-raw').textContent = p.operating_mode_text_reported + ', ' +
+    fmt(e.lv_current_reported, 0, 'A') + ' / ' + fmt(e.hv_current_reported, 0, 'A') + ' (shown as 0)';
   $('r-fs').textContent = hex(p.fault_status, 1);
   $('r-f').textContent = hex(p.faults, 3);
   $('r-vs').textContent = hex(p.voltage_status, 2);

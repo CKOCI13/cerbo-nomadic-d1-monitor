@@ -6,6 +6,16 @@ This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
 
+## 2.6.1-test (test build: 2.6.0 smoothing + idle rule, not on main)
+
+- **Idle rule:** when the D1 reports 2 A or less on the 48 V side, both sides are shown as 0 A / 0 W (before the 5 s averaging)
+  and the mode as "Idle (no power flow)". Parked after a drive, the D1 stays in Boost and keeps
+  reporting a fixed -5/-6 A and +2 A, which showed as a phantom 116 W on the Overview, DC Loads and
+  History while the Lithionics read 0.0 A. Voltages and temperature are unchanged.
+- New `[dbus] idle_current` (amps, default 2, 0 = off).
+- Web page Details shows "D1 reports" (its own mode and currents) while the rule is on.
+- New tests: `tests/test_idle.py`.
+
 ## 2.6.0 (2026-11-13)
 
 **Steadier readings on the Cerbo.** The D1 reports current in whole amps. In a field test (engine running, D1
