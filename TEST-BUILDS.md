@@ -46,6 +46,43 @@ there a current-sensor zero offset at low load, and is there a mode or frame tha
 - Trade-off: only a real transfer of 2 A or less with the 12 V side at rest is shown as 0.
 - In C, the rule is applied before the 5 s averaging, so the averaged values are 0 too.
 
+## When the idle rule hides a reading, and when it doesn't (notes, 2026-11-19)
+
+A reading is shown as Idle, 0 W **only when both** are true: the 48 V side is at 2 A or less (about 116 W)
+**and** the D1's 12 V side is at 13.0 V or less. Otherwise everything is shown exactly as the D1 sends it.
+
+| Situation | 12 V side | Shown? |
+|---|---|---|
+| Parked after a drive, fixed −5/−6 A / +2 A offset | ~12.6 V | Hidden (Idle, 0 W): the phantom 116 W |
+| Driving, alternators charging, any boost | ~14 V | Shown |
+| Any transfer over 2 A on the 48 V side | any | Shown |
+| Buck: Lithionics (e.g. with excess solar) charging the chassis batteries | ~13.4 V | Shown, even a small trickle |
+| First seconds after the Egis switches, buck still ramping, 2 A or less | ~12.5 V rising | May show Idle briefly, normal once above 13.0 V |
+| Very weak solar on the 12 V side (dawn, heavy overcast), boost of 2 A or less | 13.0 V or less | Hidden |
+
+- **Why weak boost can't be told apart:** the D1 reports current in whole amps and its parked offset already
+  reads +2 A, so a real 2 A boost and the phantom look identical in the D1's data. Only Nomadic can say whether
+  the D1 has a true zero-current reading or flag.
+- **What stays visible:** the web page Details line **"D1 reports"** shows what the D1 actually sent whenever
+  the rule is active, and the Victron MPPT reports its own solar watts to the Cerbo separately.
+- **Surface charge:** right after parking, the chassis batteries may sit above 13.0 V for a while, so the
+  116 W can still show until they settle below 13.0 V.
+- **Tuning:** if too much weak solar is hidden, lower `idle_max_12v` (e.g. 12.8). If the 116 W lingers after
+  parking, the limit can be raised slightly. `0` turns the voltage condition off.
+
+### Second opinion checked (2026-11-19)
+
+An outside AI answer blamed the 116 W on D1 "float holding" plus the Cerbo's DC Loads math (alternator minus
+battery). The DC Loads part is right. The float-holding part doesn't fit the field data: the Lithionics reads
+0.0 A (it resolves 0.1 A, so under ~6 W real), the figures don't change with loads, and the D1 reports more
+power out (116 W) than in (63–76 W). That points to a current-sensor zero offset. Its suggestions taken:
+a deadband (already build B) and the resting-voltage condition (added in 2.5.2-idle / 2.6.2-test). Not taken:
+mapping idle to a Fault/Standby state (a parked D1 isn't faulted, and a fault could raise alerts).
+
+**Test plan (2026-11-20):** install B or C, then check (1) parked after a drive: Idle, 0 W once the 12 V side
+is at 13.0 V or less; (2) driving: real boost figures; (3) chassis batteries charging from the Lithionics:
+mode "Buck 48V to 12V" with real amps and watts.
+
 ## Installing a build
 
 Each build is a `venus-data-nomadic-d1-monitor.tar.gz` file. Keep that exact name, put only one on a USB stick,
