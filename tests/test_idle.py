@@ -15,8 +15,8 @@ PARKED = (driver.MODE_BOOST, 12.6, 6, 58.0, 2)          # as the D1 reports it w
 DRIVING = (driver.MODE_BOOST, 14.0, 132, 54.2, 30)      # real boost from the alternators
 
 
-def telemetry(mode, lv_v, lv_i, hv_v, hv_i, idle_current=2.0):
-    t = driver.Telemetry(60, idle_current)
+def telemetry(mode, lv_v, lv_i, hv_v, hv_i, idle_current=2.0, idle_max_12v=13.0):
+    t = driver.Telemetry(60, idle_current, idle_max_12v)
     t.feed(nc.ID_PARAMETER, nc.encode_parameter(operating_mode=mode))
     t.feed(nc.ID_ELECTRIC, nc.encode_electric(lv_v, lv_i, hv_v, hv_i, 28))
     return t
@@ -60,6 +60,31 @@ class IdleRuleTest(unittest.TestCase):
         e = telemetry(*PARKED, idle_current=0).snapshot()['electric']
         self.assertFalse(e['idle_filtered'])
         self.assertEqual((e['lv_current'], e['hv_current']), (-6, 2))
+
+    def test_default_resting_voltage_is_13(self):
+        self.assertEqual(load_config()['dbus'].getfloat('idle_max_12v'), 13.0)
+
+    def test_small_real_boost_while_charging_is_shown(self):
+        # Alternators running (14.1 V): 2 A on the 48 V side is real and must not be hidden
+        snap = telemetry(driver.MODE_BOOST, 14.1, 9, 56.0, 2).snapshot()
+        e, p = snap['electric'], snap['parameter']
+        self.assertFalse(e['idle_filtered'])
+        self.assertEqual((e['lv_current'], e['hv_current']), (-9, 2))
+        self.assertEqual(p['operating_mode'], driver.MODE_BOOST)
+
+    def test_13_volts_still_counts_as_resting(self):
+        e = telemetry(driver.MODE_BOOST, 13.0, 6, 58.0, 2).snapshot()['electric']
+        self.assertTrue(e['idle_filtered'])
+
+    def test_small_buck_above_resting_is_shown(self):
+        # Bucking from the Lithionics, 12 V bus held at 13.4 V: a light load is real
+        e = telemetry(driver.MODE_BUCK, 13.4, 8, 54.0, 2).snapshot()['electric']
+        self.assertFalse(e['idle_filtered'])
+        self.assertEqual((e['lv_current'], e['hv_current']), (8, -2))
+
+    def test_zero_voltage_drops_the_condition(self):
+        e = telemetry(driver.MODE_BOOST, 14.1, 9, 56.0, 2, idle_max_12v=0).snapshot()['electric']
+        self.assertTrue(e['idle_filtered'])
 
     def test_no_phantom_energy_or_averages(self):
         t = telemetry(*PARKED)

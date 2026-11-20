@@ -6,6 +6,14 @@ This repository starts at 2.0.0, the monitor-only edition. Versions 1.0.0 to 1.3
 in [cerbo-nomadic-d1](https://github.com/CKOCI13/cerbo-nomadic-d1), where they continue; their entries are kept below for reference.
 
 
+## 2.5.2-idle (test build, not on main)
+
+- **Idle rule now needs the 12 V side at rest.** The rule only applies while the D1's 12 V side is at
+  13.0 V or less (engine off). With the alternators charging (about 14 V), or while bucking with the
+  12 V bus held at about 13.4 V, a real transfer of 2 A or less on the 48 V side is shown as it is.
+- New `[dbus] idle_max_12v` (volts, default 13.0, 0 = no voltage condition, as in 2.5.1).
+- New tests in `tests/test_idle.py`.
+
 ## 2.5.1-idle (test build, not on main)
 
 - **Idle rule:** when the D1 reports 2 A or less on the 48 V side, both sides are shown as 0 A / 0 W
