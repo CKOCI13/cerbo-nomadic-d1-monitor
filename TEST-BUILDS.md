@@ -6,8 +6,8 @@ release. The current release is still **2.5.0**. All three only listen to the D1
 | Label | Version | Branch | What it changes on top of 2.5.0 |
 |---|---|---|---|
 | **A: Smoothing** | 2.6.0 | [`feature/smoothing-2.6.0`](../../tree/feature/smoothing-2.6.0) (PR #17) | Averages displayed voltage, current and power over 5 s |
-| **B: Idle rule** | 2.5.1-idle | [`test/idle-2a`](../../tree/test/idle-2a) | Shows 2 A or less on the 48 V side as Idle, 0 A, 0 W |
-| **C: Smoothing + idle** | 2.6.1-test | [`test/smoothing-plus-idle-2.6.1`](../../tree/test/smoothing-plus-idle-2.6.1) | A and B together |
+| **B: Idle rule** | 2.5.2-idle | [`test/idle-2a`](../../tree/test/idle-2a) | Shows 2 A or less on the 48 V side as Idle, 0 A, 0 W, only with the 12 V side at rest (13.0 V or less) |
+| **C: Smoothing + idle** | 2.6.2-test | [`test/smoothing-plus-idle-2.6.1`](../../tree/test/smoothing-plus-idle-2.6.1) | A and B together |
 
 The version shows on the web page (`http://<cerbo-ip>:8088`, Details › Driver) and in the Cerbo's device page.
 
@@ -34,12 +34,16 @@ there a current-sensor zero offset at low load, and is there a mode or frame tha
 
 ## The idle rule (B and C)
 
-- When the D1 reports **2 A or less on the 48 V side**, both currents are shown as 0 A and 0 W, and the mode as
-  **"Idle (no power flow)"**. Voltages and temperature are unchanged.
+- When the D1 reports **2 A or less on the 48 V side** and its **12 V side is at 13.0 V or less** (engine off,
+  chassis batteries resting), both currents are shown as 0 A and 0 W, and the mode as **"Idle (no power flow)"**.
+  Voltages and temperature are unchanged.
+- With the alternators charging (about 14 V), or while bucking with the 12 V bus held at about 13.4 V, nothing
+  is hidden: a real small transfer shows as it is (added in 2.5.2-idle / 2.6.2-test).
 - The rule only changes the mode text when the D1 says Boost or Buck.
 - The web page Details shows a **"D1 reports"** line with the D1's own mode and currents while the rule is on.
 - Setting: `[dbus] idle_current` in `config.ini` (amps, default 2; `0` = off, show exactly what the D1 sends).
-- Trade-off: a real transfer of 2 A or less on the 48 V side (about 116 W) is also shown as 0.
+- Setting: `[dbus] idle_max_12v` (volts, default 13.0; `0` = no voltage condition, as in 2.5.1 / 2.6.1).
+- Trade-off: only a real transfer of 2 A or less with the 12 V side at rest is shown as 0.
 - In C, the rule is applied before the 5 s averaging, so the averaged values are 0 too.
 
 ## Installing a build
